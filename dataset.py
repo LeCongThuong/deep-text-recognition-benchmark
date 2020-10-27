@@ -270,17 +270,26 @@ class ResizeNormalize(object):
 class NormalizePAD(object):
 
     def __init__(self, max_size, PAD_type='right'):
+        """
+        Normalize image pixel value to [-1, 1] and guarantee that with of image is always less than max_size[2]
+        ( opt.width_image)
+        """
         self.toTensor = transforms.ToTensor()
         self.max_size = max_size
         self.max_width_half = math.floor(max_size[2] / 2)
         self.PAD_type = PAD_type
 
     def __call__(self, img):
+        # convert to tensor.This operation will convert pixel value and type range from ([0, 255], int8)
+        # to ([0, 1], float32)
         img = self.toTensor(img)
+        # convert range from [0, 1] to [-1, 1]
         img.sub_(0.5).div_(0.5)
+
         c, h, w = img.size()
         Pad_img = torch.FloatTensor(*self.max_size).fill_(0)
         Pad_img[:, :, :w] = img  # right pad
+        # Pad right side of img( if width of image is less than max_w_size) the last column value of image
         if self.max_size[2] != w:  # add border Pad
             Pad_img[:, :, w:] = img[:, :, w - 1].unsqueeze(2).expand(c, h, self.max_size[2] - w)
 
@@ -288,34 +297,49 @@ class NormalizePAD(object):
 
 
 class AlignCollate(object):
-
+    """
+    Resize image and normalize data batch and filter invalid samples in batch such that size of each sample will be ( channel, imgW, imgH)
+    The process of resizing depends on keep_ratio_with_pad
+    """
     def __init__(self, imgH=32, imgW=100, keep_ratio_with_pad=False):
         self.imgH = imgH
         self.imgW = imgW
         self.keep_ratio_with_pad = keep_ratio_with_pad
 
     def __call__(self, batch):
+        # filter examples that are invalid
+        # batch = [[images], [targets]]
         batch = filter(lambda x: x is not None, batch)
         images, labels = zip(*batch)
 
+        # type of images perhaps is PIL object
         if self.keep_ratio_with_pad:  # same concept with 'Rosetta' paper
             resized_max_w = self.imgW
             input_channel = 3 if images[0].mode == 'RGB' else 1
+            # create transform objects. This object will normalize [-1, 1] and resize img with is less
+            # than resized_max_w
             transform = NormalizePAD((input_channel, self.imgH, resized_max_w))
 
             resized_images = []
             for image in images:
                 w, h = image.size
                 ratio = w / float(h)
+                # image height will be resize to self.imgH
+                # image width will be resize to self.imgW ( if self.imgH * ratio < self.imgW)
+                # or resize to self.imgW ( if self.imgH * ratio > self.imgW)
+                # this step guarantees that image with is always less than self.imgW
                 if math.ceil(self.imgH * ratio) > self.imgW:
                     resized_w = self.imgW
                 else:
                     resized_w = math.ceil(self.imgH * ratio)
 
                 resized_image = image.resize((resized_w, self.imgH), Image.BICUBIC)
+
+                # padding right size of image to self.imageW
                 resized_images.append(transform(resized_image))
                 # resized_image.save('./image_test/%d_test.jpg' % w)
 
+            # convert to batch [batch_size, channel, self.imageW, self.imageH]
             image_tensors = torch.cat([t.unsqueeze(0) for t in resized_images], 0)
 
         else:
