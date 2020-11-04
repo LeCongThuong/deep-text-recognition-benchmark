@@ -15,6 +15,11 @@ import torchvision.transforms as transforms
 
 
 class Batch_Balanced_Dataset(object):
+    """
+    Create dataset from multiple data folder
+    Dataset contains samples from multiple data based on batch_ratio
+    Return batch (image, label)
+    """
 
     def __init__(self, opt):
         """
@@ -29,7 +34,7 @@ class Batch_Balanced_Dataset(object):
         print(f'dataset_root: {opt.train_data}\nopt.select_data: {opt.select_data}\nopt.batch_ratio: {opt.batch_ratio}')
         log.write(f'dataset_root: {opt.train_data}\nopt.select_data: {opt.select_data}\nopt.batch_ratio: {opt.batch_ratio}\n')
         assert len(opt.select_data) == len(opt.batch_ratio)
-
+        # AlignCollate is some kind of augment images
         _AlignCollate = AlignCollate(imgH=opt.imgH, imgW=opt.imgW, keep_ratio_with_pad=opt.PAD)
         self.data_loader_list = []
         self.dataloader_iter_list = []
@@ -47,6 +52,7 @@ class Batch_Balanced_Dataset(object):
             The total number of data can be modified with opt.total_data_usage_ratio.
             ex) opt.total_data_usage_ratio = 1 indicates 100% usage, and 0.2 indicates 20% usage.
             See 4.2 section in our paper.
+            # only take partial dataset
             """
             number_dataset = int(total_number_dataset * float(opt.total_data_usage_ratio))
             dataset_split = [number_dataset, total_number_dataset - number_dataset]
@@ -101,13 +107,17 @@ class Batch_Balanced_Dataset(object):
 
 
 def hierarchical_dataset(root, opt, select_data='/'):
-    """ select_data='/' contains all sub-directory of root directory """
+    """
+     select_data='/' contains all sub-directory of root directory
+     return dataset that concatenate all LmdbDataset that created folder( root/select_data[i])
+    """
     dataset_list = []
     dataset_log = f'dataset_root:    {root}\t dataset: {select_data[0]}'
     print(dataset_log)
     dataset_log += '\n'
     for dirpath, dirnames, filenames in os.walk(root+'/'):
         if not dirnames:
+            # if dirnames is []
             select_flag = False
             for selected_d in select_data:
                 if selected_d in dirpath:
@@ -115,6 +125,11 @@ def hierarchical_dataset(root, opt, select_data='/'):
                     break
 
             if select_flag:
+                # LmdbDataset is a subclass of torch.utils.data.Dataset
+                # By default, dataset will filter out the samples that has the label is following types:
+                # + len(label) > batch_max_length
+                # + contains characters that are not in opt.character
+                # if op.sensitive is false, lower all capital characters
                 dataset = LmdbDataset(dirpath, opt)
                 sub_dataset_log = f'sub-directory:\t/{os.path.relpath(dirpath, root)}\t num samples: {len(dataset)}'
                 print(sub_dataset_log)
@@ -212,9 +227,8 @@ class LmdbDataset(Dataset):
             # We only train and evaluate on alphanumerics (or pre-defined character set in train.py)
             out_of_char = f'[^{self.opt.character}]'
             label = re.sub(out_of_char, '', label)
-
         return (img, label)
-
+    
 
 class RawDataset(Dataset):
 
@@ -273,22 +287,25 @@ class NormalizePAD(object):
         """
         Normalize image pixel value to [-1, 1] and guarantee that with of image is always less than max_size[2]
         ( opt.width_image)
+        Args:
+            max_size: (input_channel, self.imgH, resized_max_w)
         """
         self.toTensor = transforms.ToTensor()
         self.max_size = max_size
-        self.max_width_half = math.floor(max_size[2] / 2)
+        self.max_width_half = math.floor(max_size[2] / 2) # no idea what it means
         self.PAD_type = PAD_type
 
     def __call__(self, img):
+        # Normalization
         # convert to tensor.This operation will convert pixel value and type range from ([0, 255], int8)
         # to ([0, 1], float32)
         img = self.toTensor(img)
         # convert range from [0, 1] to [-1, 1]
         img.sub_(0.5).div_(0.5)
-
+        # Padding
         c, h, w = img.size()
         Pad_img = torch.FloatTensor(*self.max_size).fill_(0)
-        Pad_img[:, :, :w] = img  # right pad
+        Pad_img[:, :, :w] = img  # right pad with zero value
         # Pad right side of img( if width of image is less than max_w_size) the last column value of image
         if self.max_size[2] != w:  # add border Pad
             Pad_img[:, :, w:] = img[:, :, w - 1].unsqueeze(2).expand(c, h, self.max_size[2] - w)
@@ -298,7 +315,8 @@ class NormalizePAD(object):
 
 class AlignCollate(object):
     """
-    Resize image and normalize data batch and filter invalid samples in batch such that size of each sample will be ( channel, imgW, imgH)
+    Resize image and normalize data batch and filter invalid samples in batch such that size of each sample will be
+    (channel, imgW, imgH).
     The process of resizing depends on keep_ratio_with_pad
     """
     def __init__(self, imgH=32, imgW=100, keep_ratio_with_pad=False):
@@ -328,6 +346,7 @@ class AlignCollate(object):
                 # image width will be resize to self.imgW ( if self.imgH * ratio < self.imgW)
                 # or resize to self.imgW ( if self.imgH * ratio > self.imgW)
                 # this step guarantees that image with is always less than self.imgW
+                #
                 if math.ceil(self.imgH * ratio) > self.imgW:
                     resized_w = self.imgW
                 else:
