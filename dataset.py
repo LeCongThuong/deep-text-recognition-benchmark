@@ -108,8 +108,9 @@ class Batch_Balanced_Dataset(object):
 
 def hierarchical_dataset(root, opt, select_data='/'):
     """
-     select_data='/' contains all sub-directory of root directory
+     (root + select_data) path contains all sub-directory of root directory
      return dataset that concatenate all LmdbDataset that created folder( root/select_data[i])
+     if select_data == '/', this is validation data. '/' is very tricky.
     """
     dataset_list = []
     dataset_log = f'dataset_root:    {root}\t dataset: {select_data[0]}'
@@ -292,7 +293,7 @@ class NormalizePAD(object):
         """
         self.toTensor = transforms.ToTensor()
         self.max_size = max_size
-        self.max_width_half = math.floor(max_size[2] / 2) # no idea what it means
+        self.max_width_half = math.floor(max_size[2] / 2)  # no idea what it means
         self.PAD_type = PAD_type
 
     def __call__(self, img):
@@ -334,7 +335,7 @@ class AlignCollate(object):
         if self.keep_ratio_with_pad:  # same concept with 'Rosetta' paper
             resized_max_w = self.imgW
             input_channel = 3 if images[0].mode == 'RGB' else 1
-            # create transform objects. This object will normalize [-1, 1] and resize img with is less
+            # create transform objects. This object will normalize [-1, 1] and resize img width is less
             # than resized_max_w
             transform = NormalizePAD((input_channel, self.imgH, resized_max_w))
 

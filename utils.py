@@ -67,7 +67,8 @@ class CTCLabelConverterForBaiduWarpctc(object):
         self.character = ['[CTCblank]'] + dict_character  # dummy '[CTCblank]' token for CTCLoss (index 0)
 
     def encode(self, text, batch_max_length=25):
-        """convert text-label into text-index.
+        """
+        convert text-label into text-index.
         input:
             text: text labels of each image. [batch_size]
         output:
@@ -78,8 +79,7 @@ class CTCLabelConverterForBaiduWarpctc(object):
         length = [len(s) for s in text]
         text = ''.join(text)
         text = [self.dict[char] for char in text]
-
-        return (torch.IntTensor(text), torch.IntTensor(length))
+        return torch.IntTensor(text), torch.IntTensor(length)
 
     def decode(self, text_index, length):
         """ convert text-index into text-label. """
@@ -87,7 +87,6 @@ class CTCLabelConverterForBaiduWarpctc(object):
         index = 0
         for l in length:
             t = text_index[index:index + l]
-
             char_list = []
             for i in range(l):
                 if t[i] != 0 and (not (i > 0 and t[i - 1] == t[i])):  # removing repeated characters and blank.
@@ -121,7 +120,7 @@ class AttnLabelConverter(object):
             batch_max_length: max length of text label in the batch. 25 by default
 
         output:
-            text : the input of attention decoder. [batch_size x (max_length+2)] +1 for [GO] token and +1 for [s] token.
+            text : the input of attention decoder. Shape [batch_size x (max_length+2)] (+1 for [GO] token and +1 for [s] token).
                 text[:, 0] is [GO] token and text is padded with [GO] token after [s] token.
             length : the length of output of attention decoder, which count [s] token also. [3, 7, ....] [batch_size]
         """
