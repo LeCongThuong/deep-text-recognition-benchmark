@@ -147,7 +147,6 @@ def train(opt):
 
     while(True):
         # train part
-
         image_tensors, labels = train_dataset.get_batch()
         image = image_tensors.to(device)
         text, length = converter.encode(labels, batch_max_length=opt.batch_max_length)
@@ -183,7 +182,7 @@ def train(opt):
                 model.eval()
                 with torch.no_grad():
                     valid_loss, current_accuracy, current_norm_ED, preds, confidence_score, labels, infer_time, length_of_data = validation(
-                        model, criterion, valid_loader, converter, opt)
+                        model, criterion, valid_loader, converter, opt, iteration)
                 model.train()
 
                 # training loss and validation loss
@@ -277,7 +276,9 @@ if __name__ == '__main__':
     parser.add_argument('--output_channel', type=int, default=512,
                         help='the number of output channel of Feature extractor')
     parser.add_argument('--hidden_size', type=int, default=256, help='the size of the LSTM hidden state')
-
+    parser.add_argument('--show_val_images', action='store_true', help='whether or not save the plot that show image and prediction of model')
+    parser.add_argument('--num_val_images_show', type=int, default=100, help='if show_val_images is True, num of first val images will be showed on plot')
+    parser.add_argument('--saved_val_images_dir', type=str, default='./val_images_dir', help='dir to save val images')
     opt = parser.parse_args()
 
     if not opt.exp_name:

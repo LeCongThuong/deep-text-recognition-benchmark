@@ -14,6 +14,8 @@ from nltk.metrics.distance import edit_distance
 from utils import CTCLabelConverter, AttnLabelConverter, Averager
 from dataset import hierarchical_dataset, AlignCollate
 from model import Model
+import matplotlib.pyplot as plt
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -78,7 +80,30 @@ def benchmark_all_eval(model, criterion, converter, opt, calculate_infer_time=Fa
     return None
 
 
-def validation(model, criterion, evaluation_loader, converter, opt):
+def show_model_prediction_on_val_images(images, prediction_label, prediction_conf, gt, save_dir, iteration):
+    """
+    Save prediction of model with image on plot
+    Args:
+        images:numpy array: (batch_size, h, w, c)
+        prediction_label : string list: (batch_size, )
+        prediction_conf : float list: (batch_size, )
+        gt: ground truth label of images
+        save_dir : where to save plot
+        iteration :
+    """
+    num_images = images.shape[0]
+    n_cols = 5
+    n_rows = num_images // n_cols if num_images % n_cols == 0 else num_images // n_cols + 1
+    fig, axes = plt.subplots(nrows=n_rows, n_cols=n_cols, figsize=(24, 18))
+    for i in range(num_images):
+        axes[i % n_cols, i // n_cols].imshow(images[i])
+        title_str = f"{prediction_conf[i]}-{prediction_label[i]}-{gt[i]}"
+        axes[i % n_cols, i // n_cols].set_title(title_str)
+    plot_name = save_dir + os.path.sep + f'iter_{iteration}.png'
+    fig.savefig(plot_name)
+
+
+def validation(model, criterion, evaluation_loader, converter, opt, iteration):
     """ validation or evaluation """
     n_correct = 0
     norm_ED = 0
@@ -183,6 +208,14 @@ def validation(model, criterion, evaluation_loader, converter, opt):
 
     accuracy = n_correct / float(length_of_data) * 100
     norm_ED = norm_ED / float(length_of_data)  # ICDAR2019 Normalized Edit Distance
+    if opt.show_val_images:
+        images = image.detach().cpu().numpy()[:opt.num_val_images_show]
+        labels = labels[:opt.num_val_images_show]
+        confidence_list = confidence_score_list[:opt.num_val_images_show]
+        preds_str = preds_str[:opt.num_val_images_show]
+        saved_dir = f'{opt.saved_val_images_dir}/{opt.exp_name}'
+        os.makedirs(saved_dir, exist_ok=True)
+        show_model_prediction_on_val_images(images, preds_str, confidence_list, labels, saved_dir, iteration)
 
     return valid_loss_avg.val(), accuracy, norm_ED, preds_str, confidence_score_list, labels, infer_time, length_of_data
 

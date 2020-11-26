@@ -120,7 +120,7 @@ class AttnLabelConverter(object):
             batch_max_length: max length of text label in the batch. 25 by default
 
         output:
-            text : the input of attention decoder. Shape [batch_size x (max_length+2)] (+1 for [GO] token and +1 for [s] token).
+            text : the input of attention decoder. Shape [batch_size x (max_length+1)] (+1 for [GO] token and +1 for [s] token).
                 text[:, 0] is [GO] token and text is padded with [GO] token after [s] token.
             length : the length of output of attention decoder, which count [s] token also. [3, 7, ....] [batch_size]
         """
