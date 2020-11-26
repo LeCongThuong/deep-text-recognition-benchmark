@@ -91,14 +91,22 @@ def show_model_prediction_on_val_images(images, prediction_label, prediction_con
         save_dir : where to save plot
         iteration :
     """
+    prune_gt = []
+    prune_pred = []
+    for every_gt, every_pred in zip(gt, prediction_label):
+        every_gt = every_gt[:every_gt.find('[s]')]
+        every_pred = every_pred[:every_pred.find('[s]')]  # prune after "end of sentence" token ([s])
+        prune_gt.append(every_gt)
+        prune_pred.append(every_pred)
+
     num_images = images.shape[0]
     n_cols = 5
     n_rows = num_images // n_cols if num_images % n_cols == 0 else num_images // n_cols + 1
-    fig, axes = plt.subplots(nrows=n_rows, n_cols=n_cols, figsize=(24, 18))
+    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(24, 18))
     for i in range(num_images):
-        axes[i % n_cols, i // n_cols].imshow(images[i])
-        title_str = f"{prediction_conf[i]}-{prediction_label[i]}-{gt[i]}"
-        axes[i % n_cols, i // n_cols].set_title(title_str)
+        axes[i // n_cols, i % n_cols].imshow(images[i].squeeze(0))
+        title_str = f"{np.round_(np.array(prediction_conf[i].cpu()), 2)}-{prune_pred[i]}-{prune_gt[i]}"
+        axes[i // n_cols, i % n_cols].set_title(title_str)
     plot_name = save_dir + os.path.sep + f'iter_{iteration}.png'
     fig.savefig(plot_name)
 
