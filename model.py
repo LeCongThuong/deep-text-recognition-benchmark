@@ -15,12 +15,12 @@ limitations under the License.
 """
 
 import torch.nn as nn
-
+import os
 from modules.transformation import TPS_SpatialTransformerNetwork
 from modules.feature_extraction import VGG_FeatureExtractor, RCNN_FeatureExtractor, ResNet_FeatureExtractor
-from modules.sequence_modeling import BidirectionalLSTM
-from modules.prediction import Attention
-import re
+from modules.sequence_modeling import BiLSTM
+from modules.prediction import Attention, CTC_Prediction
+import torch
 
 
 class Model(nn.Module):
@@ -28,12 +28,12 @@ class Model(nn.Module):
     def __init__(self, opt):
         super(Model, self).__init__()
         self.opt = opt
-        self.stages = {'Trans': opt.Transformation, 'Feat': opt.FeatureExtraction,
-                       'Seq': opt.SequenceModeling, 'Pred': opt.Prediction}
+        self.stages = {'Transformation': opt.Transformation, 'FeatureExtraction': opt.FeatureExtraction,
+                       'SequenceModeling': opt.SequenceModeling, 'Prediction': opt.Prediction}
 
         """ Transformation """
         if opt.Transformation == 'TPS':
-            self.Transformation = TPS_SpatialTransformerNetwork(
+            self.Transformation = TPS_SpatialTransformerNetwork(opt.ft_config['trans'],
                 F=opt.num_fiducial, I_size=(opt.imgH, opt.imgW), I_r_size=(opt.imgH, opt.imgW),
                 I_channel_num=opt.input_channel)
         else:
@@ -45,7 +45,7 @@ class Model(nn.Module):
         elif opt.FeatureExtraction == 'RCNN':
             self.FeatureExtraction = RCNN_FeatureExtractor(opt.input_channel, opt.output_channel)
         elif opt.FeatureExtraction == 'ResNet':
-            self.FeatureExtraction = ResNet_FeatureExtractor(opt.input_channel, opt.output_channel)
+            self.FeatureExtraction = ResNet_FeatureExtractor(opt.ft_config['feat'], opt.input_channel, opt.output_channel)
         else:
             raise Exception('No FeatureExtraction module specified')
         self.FeatureExtraction_output = opt.output_channel  # int(imgH/16-1) * 512
@@ -53,9 +53,7 @@ class Model(nn.Module):
 
         """ Sequence modeling"""
         if opt.SequenceModeling == 'BiLSTM':
-            self.SequenceModeling = nn.Sequential(
-                BidirectionalLSTM(self.FeatureExtraction_output, opt.hidden_size, opt.hidden_size),
-                BidirectionalLSTM(opt.hidden_size, opt.hidden_size, opt.hidden_size))
+            self.SequenceModeling = BiLSTM(opt.ft_config['seq'],self.FeatureExtraction_output, opt.hidden_size)
             self.SequenceModeling_output = opt.hidden_size
         else:
             print('No SequenceModeling module specified')
@@ -63,11 +61,13 @@ class Model(nn.Module):
 
         """ Prediction """
         if opt.Prediction == 'CTC':
-            self.Prediction = nn.Linear(self.SequenceModeling_output, opt.num_class)
+            self.Prediction = CTC_Prediction(opt.ft_config['pred'], self.SequenceModeling_output, opt.num_class)
         elif opt.Prediction == 'Attn':
-            self.Prediction = Attention(self.SequenceModeling_output, opt.hidden_size, opt.num_class)
+            self.Prediction = Attention(opt.ft_config['pred'], self.SequenceModeling_output, opt.hidden_size, opt.num_class)
         else:
             raise Exception('Prediction is neither CTC or Attn')
+
+        self.optimizers = self.configure_optimizers()
 
     def forward(self, input, text, is_train=True):
         """ Transformation stage """
@@ -93,66 +93,41 @@ class Model(nn.Module):
 
         return prediction
 
-    def _set_parameter_requires_grad_trans(self, ft_trans_config):
-        mode = ft_trans_config['mode']
-        if mode == 0:
-            for param in self.Transformation:
-                param.requires_grad = False
-        else:
-            for param in self.Transformation:
-                param.requires_grad = True
+    def load_pretrained_networks(self):
+        checkpoint = torch.load(self.opt.saved_model)
+        state_dict = self.state_dict()
+        checkpoint = {k: v for k, v in checkpoint.items() if checkpoint[k].shape == state_dict[k].shape}
+        self.load_state_dict(checkpoint, strict=False)
 
-    @staticmethod
-    def _check_whether_update_resnet_grad_feat(self, name_parameter, layer_postion):
-        str = "ConvNet.layer3.3.bn2.weight"
-        layers = name_parameter.split('.')[1]
-        layer = int(re.findall('\d+', layers)[0])
-        if layer <= layer_postion:
-            return False
+    def load_checkpoint(self, name='model.pth'):
+        model_path = os.path.join(self.opt.saved_model, name)
+        checkpoint = torch.load(model_path)
+        for key, value in self.stages:
+            if value is not None:
+                net = getattr(self, key)
+                net.load_state_dict(checkpoint[key])
+                optimizer_name = key + '_optimizer'
+                self.optimizers.load_state_dict(checkpoint[optimizer_name])
 
-    def _set_parameter_requires_grad_feat(self, ft_feat_config):
-        mode = ft_feat_config['mode']
-        if mode == 1:
-            for param in self.FeatureExtraction.parameters():
-                param.requires_grad = True
-        elif mode == 2:
-            layer_position = ft_feat_config['layer_position']
-            for name, param in self.FeatureExtraction.named_parameters():
-                can_update = self._check_whether_update_resnet_grad_feat(name, layer_position)
-                if can_update:
-                    param.requires_grad = True
-                else:
-                    param.requires_grad = False
-        else:
-            for param in self.FeatureExtraction:
-                param.requires_grad = False
+    def save_checkpoints(self, epoch, name):
+        state_dict = {}
+        for key, value in self.stages:
+            if value is not None:
+                state_dict[key] = getattr(self, key).state_dict()
+                optimizer_name = key + '_optimizer'
+                state_dict[optimizer_name] = self.optimizers[key]
+        state_dict['epoch'] = epoch
+        save_path = os.path.join(self.opt.saved_model, name)
+        torch.save(state_dict, save_path)
 
-    def _set_parameter_requires_grad_seq(self, ft_seq_config):
-        mode = ft_seq_config['mode']
-        if mode == 0:
-            for param in self.SequenceModeling:
-                param.requires_grad = False
-        else:
-            for param in self.SequenceModeling:
-                param.requires_grad = True
+    def configure_optimizers(self):
+        optimizers = {}
+        for key, value in self.stages:
+            if value is not None:
+                net = getattr(self, key)
+                optimizers[key] = net.configure_optimizers()
+        return optimizers
 
-    def _set_parameter_requires_grad_pred(self, ft_pred_config):
-        mode = ft_pred_config['mode']
-        if mode == 0:
-            for param in self.Prediction:
-                param.requires_grad = False
-        else:
-            for param in self.Prediction:
-                param.requires_grad = True
-
-    def set_parameter_requires_grad_model(self, ft_config):
-        if self.stages['Trans'] is not None:
-            self._set_parameter_requires_grad_trans(ft_config["trans"])
-        self._set_parameter_requires_grad_feat(ft_config["feat"])
-        if self.stages['Seq'] is not None:
-            self._set_parameter_requires_grad_seq(ft_config["seq"])
-        self._set_parameter_requires_grad_pred(ft_config["pred"])
-
-
-
-
+    def optimize_parameters(self):
+        for optimizer in self.optimizers:
+            optimizer.steps()
