@@ -240,6 +240,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_iter', type=int, default=300000, help='number of iterations to train for')
     parser.add_argument('--valInterval', type=int, default=2000, help='Interval between each validation')
     parser.add_argument('--saved_model', default='', help="path to model to continue training")
+    parser.add_argument('--model_name', default='TPS-ResNet-BiLSTM-Attn.pth', help="name of model to continue training")
     parser.add_argument('--FT', action='store_true', help='whether to do fine-tuning')
     parser.add_argument('--ft_config_path', default='./configs/defaults_ft_configs.json', help="file contains parameters for fine tuning")
     parser.add_argument('--ft_config', default='', help="dict for fine tuning")

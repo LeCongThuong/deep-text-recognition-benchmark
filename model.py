@@ -99,7 +99,7 @@ class Model(nn.Module):
         checkpoint = {k: v for k, v in checkpoint.items() if checkpoint[k].shape == state_dict[k].shape}
         self.load_state_dict(checkpoint, strict=False)
 
-    def load_checkpoint(self, name='model.pth'):
+    def load_checkpoint(self, name='TPS-ResNet-BiLSTM-Attn.pth'):
         model_path = os.path.join(self.opt.saved_model, name)
         checkpoint = torch.load(model_path)
         for key, value in self.stages:
