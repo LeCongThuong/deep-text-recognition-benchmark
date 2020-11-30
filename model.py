@@ -20,6 +20,7 @@ from modules.transformation import TPS_SpatialTransformerNetwork
 from modules.feature_extraction import VGG_FeatureExtractor, RCNN_FeatureExtractor, ResNet_FeatureExtractor
 from modules.sequence_modeling import BidirectionalLSTM
 from modules.prediction import Attention
+import re
 
 
 class Model(nn.Module):
@@ -91,3 +92,67 @@ class Model(nn.Module):
             prediction = self.Prediction(contextual_feature.contiguous(), text, is_train, batch_max_length=self.opt.batch_max_length)
 
         return prediction
+
+    def _set_parameter_requires_grad_trans(self, ft_trans_config):
+        mode = ft_trans_config['mode']
+        if mode == 0:
+            for param in self.Transformation:
+                param.requires_grad = False
+        else:
+            for param in self.Transformation:
+                param.requires_grad = True
+
+    @staticmethod
+    def _check_whether_update_resnet_grad_feat(self, name_parameter, layer_postion):
+        str = "ConvNet.layer3.3.bn2.weight"
+        layers = name_parameter.split('.')[1]
+        layer = int(re.findall('\d+', layers)[0])
+        if layer <= layer_postion:
+            return False
+
+    def _set_parameter_requires_grad_feat(self, ft_feat_config):
+        mode = ft_feat_config['mode']
+        if mode == 1:
+            for param in self.FeatureExtraction.parameters():
+                param.requires_grad = True
+        elif mode == 2:
+            layer_position = ft_feat_config['layer_position']
+            for name, param in self.FeatureExtraction.named_parameters():
+                can_update = self._check_whether_update_resnet_grad_feat(name, layer_position)
+                if can_update:
+                    param.requires_grad = True
+                else:
+                    param.requires_grad = False
+        else:
+            for param in self.FeatureExtraction:
+                param.requires_grad = False
+
+    def _set_parameter_requires_grad_seq(self, ft_seq_config):
+        mode = ft_seq_config['mode']
+        if mode == 0:
+            for param in self.SequenceModeling:
+                param.requires_grad = False
+        else:
+            for param in self.SequenceModeling:
+                param.requires_grad = True
+
+    def _set_parameter_requires_grad_pred(self, ft_pred_config):
+        mode = ft_pred_config['mode']
+        if mode == 0:
+            for param in self.Prediction:
+                param.requires_grad = False
+        else:
+            for param in self.Prediction:
+                param.requires_grad = True
+
+    def set_parameter_requires_grad_model(self, ft_config):
+        if self.stages['Trans'] is not None:
+            self._set_parameter_requires_grad_trans(ft_config["trans"])
+        self._set_parameter_requires_grad_feat(ft_config["feat"])
+        if self.stages['Seq'] is not None:
+            self._set_parameter_requires_grad_seq(ft_config["seq"])
+        self._set_parameter_requires_grad_pred(ft_config["pred"])
+
+
+
+

@@ -1,0 +1,15 @@
+{
+  "trans": {
+    "mode": 0
+  },
+  "feat": {
+    "mode": 2,
+    "layer_position": 2
+  },
+  "seq": {
+    "mode": 1
+  },
+  "pred": {
+    "mode" : 1
+  }
+}

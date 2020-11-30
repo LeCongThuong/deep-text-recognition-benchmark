@@ -4,6 +4,7 @@ import time
 import random
 import string
 import argparse
+import json
 
 import torch
 import torch.backends.cudnn as cudnn
@@ -241,6 +242,8 @@ if __name__ == '__main__':
     parser.add_argument('--valInterval', type=int, default=2000, help='Interval between each validation')
     parser.add_argument('--saved_model', default='', help="path to model to continue training")
     parser.add_argument('--FT', action='store_true', help='whether to do fine-tuning')
+    parser.add_argument('--ft_config_path', default='./configs/defaults_ft_configs.json', help="file contains parameters for fine tuning")
+    parser.add_argument('--ft_config', default='', help="dict for fine tuning")
     parser.add_argument('--adam', action='store_true', help='Whether to use adam (default is Adadelta)')
     parser.add_argument('--lr', type=float, default=1, help='learning rate, default=1.0 for Adadelta')
     parser.add_argument('--beta1', type=float, default=0.9, help='beta1 for adam. default=0.9')
@@ -279,6 +282,7 @@ if __name__ == '__main__':
     parser.add_argument('--show_val_images', action='store_true', help='whether or not save the plot that show image and prediction of model')
     parser.add_argument('--num_val_images_show', type=int, default=100, help='if show_val_images is True, num of first val images will be showed on plot')
     parser.add_argument('--saved_val_images_dir', type=str, default='./val_images_dir', help='dir to save val images')
+
     opt = parser.parse_args()
 
     if not opt.exp_name:
@@ -287,6 +291,11 @@ if __name__ == '__main__':
         # print(opt.exp_name)
 
     os.makedirs(f'./saved_models/{opt.exp_name}', exist_ok=True)
+
+    """Load ft config for fine-tuning process"""
+    if opt.FT:
+        with open(opt.ft_config_path, 'r') as f:
+            opt.ft_config = json.load(f)
 
     """ vocab / character number configuration """
     if opt.sensitive:
