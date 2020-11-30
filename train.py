@@ -80,14 +80,17 @@ def train(opt):
     # data parallel for multi-GPU
     model = model.to(device)
     model.train()
-
+    model.configure_optimizers()
     # load pretrained model
     if opt.saved_model != '':
         print(f'loading pretrained model from {opt.saved_model}')
         if opt.FT:
-            model.load_state_dict(torch.load(opt.saved_model), strict=False)
+            model.load_pretrained_networks()
+        if opt.continue_train:
+            model.load_checkpoint()
         else:
-            model.load_state_dict(torch.load(opt.saved_model))
+            raise Exception('Something went wrong!')
+
     print("Model:")
     print(model)
 
@@ -104,24 +107,24 @@ def train(opt):
     # loss averager
     loss_avg = Averager()
 
-    # filter that only require gradient decent
-    filtered_parameters = []
-    params_num = []
-    for p in filter(lambda p: p.requires_grad, model.parameters()):
-        filtered_parameters.append(p)
-        params_num.append(np.prod(p.size()))
-    print('Trainable params num : ', sum(params_num))
-    # [print(name, p.numel()) for name, p in filter(lambda p: p[1].requires_grad, model.named_parameters())]
-
-    # setup optimizer
-    if opt.adam:
-        optimizer = optim.Adam(filtered_parameters, lr=opt.lr, betas=(opt.beta1, 0.999))
-    else:
-        optimizer = optim.Adadelta(filtered_parameters, lr=opt.lr, rho=opt.rho, eps=opt.eps)
-    print("Optimizer:")
-    print(optimizer)
-
-    """ final options """
+    # # filter that only require gradient decent
+    # filtered_parameters = []
+    # params_num = []
+    # for p in filter(lambda p: p.requires_grad, model.parameters()):
+    #     filtered_parameters.append(p)
+    #     params_num.append(np.prod(p.size()))
+    # print('Trainable params num : ', sum(params_num))
+    # # [print(name, p.numel()) for name, p in filter(lambda p: p[1].requires_grad, model.named_parameters())]
+    #
+    # # setup optimizer
+    # if opt.adam:
+    #     optimizer = optim.Adam(filtered_parameters, lr=opt.lr, betas=(opt.beta1, 0.999))
+    # else:
+    #     optimizer = optim.Adadelta(filtered_parameters, lr=opt.lr, rho=opt.rho, eps=opt.eps)
+    # print("Optimizer:")
+    # print(optimizer)
+    #
+    # """ final options """
     # print(opt)
     with open(f'./saved_models/{opt.exp_name}/opt.txt', 'a') as opt_file:
         opt_log = '------------ Options -------------\n'
@@ -171,7 +174,7 @@ def train(opt):
         model.zero_grad()
         cost.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), opt.grad_clip)  # gradient clipping with 5 (Default)
-        optimizer.step()
+        model.optimize_parameters()
 
         loss_avg.add(cost)
 
@@ -195,10 +198,10 @@ def train(opt):
                 # keep best accuracy model (on valid dataset)
                 if current_accuracy > best_accuracy:
                     best_accuracy = current_accuracy
-                    torch.save(model.state_dict(), f'./saved_models/{opt.exp_name}/best_accuracy.pth')
+                    model.save_checkpoints(iteration, 'best_accuracy.pth')
                 if current_norm_ED > best_norm_ED:
                     best_norm_ED = current_norm_ED
-                    torch.save(model.state_dict(), f'./saved_models/{opt.exp_name}/best_norm_ED.pth')
+                    model.save_checkpoints(iteration,'best_norm_ED.pth')
                 best_model_log = f'{"Best_accuracy":17s}: {best_accuracy:0.3f}, {"Best_norm_ED":17s}: {best_norm_ED:0.2f}'
 
                 loss_model_log = f'{loss_log}\n{current_model_log}\n{best_model_log}'
@@ -220,8 +223,7 @@ def train(opt):
 
         # save model per 1e+5 iter.
         if (iteration + 1) % 1e+5 == 0:
-            torch.save(
-                model.state_dict(), f'./saved_models/{opt.exp_name}/iter_{iteration+1}.pth')
+            model.save_checkpoints(iteration, opt.model_name)
 
         if (iteration + 1) == opt.num_iter:
             print('end the training')
@@ -240,10 +242,11 @@ if __name__ == '__main__':
     parser.add_argument('--num_iter', type=int, default=300000, help='number of iterations to train for')
     parser.add_argument('--valInterval', type=int, default=2000, help='Interval between each validation')
     parser.add_argument('--saved_model', default='', help="path to model to continue training")
-    parser.add_argument('--model_name', default='TPS-ResNet-BiLSTM-Attn.pth', help="name of model to continue training")
+    parser.add_argument('--model_name', default='model.pth', help="name of model to save during train")
     parser.add_argument('--FT', action='store_true', help='whether to do fine-tuning')
     parser.add_argument('--ft_config_path', default='./configs/defaults_ft_configs.json', help="file contains parameters for fine tuning")
     parser.add_argument('--ft_config', default='', help="dict for fine tuning")
+    parser.add_argument('--continue_train', action='store_true', help='whether to do continue training')
     parser.add_argument('--adam', action='store_true', help='Whether to use adam (default is Adadelta)')
     parser.add_argument('--lr', type=float, default=1, help='learning rate, default=1.0 for Adadelta')
     parser.add_argument('--beta1', type=float, default=0.9, help='beta1 for adam. default=0.9')

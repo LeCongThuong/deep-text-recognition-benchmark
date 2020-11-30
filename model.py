@@ -99,8 +99,8 @@ class Model(nn.Module):
         checkpoint = {k: v for k, v in checkpoint.items() if checkpoint[k].shape == state_dict[k].shape}
         self.load_state_dict(checkpoint, strict=False)
 
-    def load_checkpoint(self, name='TPS-ResNet-BiLSTM-Attn.pth'):
-        model_path = os.path.join(self.opt.saved_model, name)
+    def load_checkpoint(self):
+        model_path = os.path.join(f'./saved_models/{self.opt.exp_name}', self.opt.model_name)
         checkpoint = torch.load(model_path)
         for key, value in self.stages:
             if value is not None:
@@ -109,15 +109,15 @@ class Model(nn.Module):
                 optimizer_name = key + '_optimizer'
                 self.optimizers.load_state_dict(checkpoint[optimizer_name])
 
-    def save_checkpoints(self, epoch, name):
+    def save_checkpoints(self, iteration, name):
         state_dict = {}
         for key, value in self.stages:
             if value is not None:
                 state_dict[key] = getattr(self, key).state_dict()
                 optimizer_name = key + '_optimizer'
                 state_dict[optimizer_name] = self.optimizers[key]
-        state_dict['epoch'] = epoch
-        save_path = os.path.join(self.opt.saved_model, name)
+        state_dict['iteration'] = iteration
+        save_path = os.path.join(f'./saved_models/{self.opt.exp_name}', name)
         torch.save(state_dict, save_path)
 
     def configure_optimizers(self):
