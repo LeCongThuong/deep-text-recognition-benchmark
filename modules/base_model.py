@@ -4,9 +4,14 @@ import torch.optim as optim
 
 
 class BaseModel(nn.Module):
-    def __init__(self, optim_config):
+    def __init__(self, opt):
+        """
+        Args:
+            opt: config for setting up optimizer and freeze some layers(if necessary)
+        """
         super(BaseModel, self).__init__()
-        self.optim_config = optim_config
+        self.optim_config = opt
+        self.optimizer = self.configure_optimizers()
 
     def _set_parameter_requires_grad(self):
         mode = self.optim_config['mode']
@@ -20,11 +25,11 @@ class BaseModel(nn.Module):
     def configure_optimizers(self):
         self._set_parameter_requires_grad()
         filtered_params = self._filter_required_params()
-        if self.opt.adam:
-            self.optimizer = optim.Adam(filtered_params, lr=self.optim_config['lr'], betas=(self.optim_config['beta1'], 0.999))
+        if self.optim_config.optimizer == 'adam':
+            optimizer = optim.Adam(filtered_params, lr=self.optim_config['lr'], betas=(self.optim_config['beta1'], 0.999))
         else:
-            self.optimizer = optim.Adadelta(filtered_params, lr=self.optim_config['lr'], rho=self.optim_config['rho'], eps=self.optim_config['eps'])
-        return self.optimizer
+            optimizer = optim.Adadelta(filtered_params, lr=self.optim_config['lr'], rho=self.optim_config['rho'], eps=self.optim_config['eps'])
+        return optimizer
 
     def _filter_required_params(self):
         filtered_parameters = []

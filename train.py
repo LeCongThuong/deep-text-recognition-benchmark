@@ -53,6 +53,7 @@ def train(opt):
             converter = CTCLabelConverter(opt.character)
     else:
         converter = AttnLabelConverter(opt.character)
+
     opt.num_class = len(converter.character)
 
     if opt.rgb:
@@ -80,7 +81,6 @@ def train(opt):
     # data parallel for multi-GPU
     model = model.to(device)
     model.train()
-    model.configure_optimizers()
     # load pretrained model
     if opt.saved_model != '':
         print(f'loading pretrained model from {opt.saved_model}')
@@ -137,12 +137,12 @@ def train(opt):
 
     """ start training """
     start_iter = 0
-    if opt.saved_model != '':
-        try:
-            start_iter = int(opt.saved_model.split('_')[-1].split('.')[0])
-            print(f'continue to train, start_iter: {start_iter}')
-        except:
-            pass
+    # if opt.saved_model != '':
+    #     try:
+    #         start_iter = int(opt.saved_model.split('_')[-1].split('.')[0])
+    #         print(f'continue to train, start_iter: {start_iter}')
+    #     except:
+    #         pass
 
     start_time = time.time()
     best_accuracy = -1
@@ -223,7 +223,7 @@ def train(opt):
 
         # save model per 1e+5 iter.
         if (iteration + 1) % 1e+5 == 0:
-            model.save_checkpoints(iteration, opt.model_name)
+            model.save_checkpoints(iteration + 1, opt.model_name)
 
         if (iteration + 1) == opt.num_iter:
             print('end the training')
@@ -247,11 +247,6 @@ if __name__ == '__main__':
     parser.add_argument('--ft_config_path', default='./configs/defaults_ft_configs.json', help="file contains parameters for fine tuning")
     parser.add_argument('--ft_config', default='', help="dict for fine tuning")
     parser.add_argument('--continue_train', action='store_true', help='whether to do continue training')
-    parser.add_argument('--adam', action='store_true', help='Whether to use adam (default is Adadelta)')
-    parser.add_argument('--lr', type=float, default=1, help='learning rate, default=1.0 for Adadelta')
-    parser.add_argument('--beta1', type=float, default=0.9, help='beta1 for adam. default=0.9')
-    parser.add_argument('--rho', type=float, default=0.95, help='decay rate rho for Adadelta. default=0.95')
-    parser.add_argument('--eps', type=float, default=1e-8, help='eps for Adadelta. default=1e-8')
     parser.add_argument('--grad_clip', type=float, default=5, help='gradient clipping value. default=5')
     parser.add_argument('--baiduCTC', action='store_true', help='for data_filtering_off mode')
     """ Data processing """
@@ -295,10 +290,9 @@ if __name__ == '__main__':
 
     os.makedirs(f'./saved_models/{opt.exp_name}', exist_ok=True)
 
-    """Load ft config for fine-tuning process"""
-    if opt.FT:
-        with open(opt.ft_config_path, 'r') as f:
-            opt.ft_config = json.load(f)
+    """Load optimization config for training process"""
+    with open(opt.ft_config_path, 'r') as f:
+        opt.ft_config = json.load(f)
 
     """ vocab / character number configuration """
     if opt.sensitive:

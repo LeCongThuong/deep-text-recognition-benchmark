@@ -12,6 +12,7 @@ class TPS_SpatialTransformerNetwork(BaseModel):
     def __init__(self, opt, F, I_size, I_r_size, I_channel_num=1):
         """ Based on RARE TPS
         input:
+            opt: config for setting up optimizer and freeze some layers(if necessary)
             batch_I: Batch Input Image [batch_size x I_channel_num x I_height x I_width]
             I_size : (height, width) of the input image I
             I_r_size : (height, width) of the rectified image I_r

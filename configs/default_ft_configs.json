@@ -1,15 +1,38 @@
 {
   "trans": {
-    "mode": 0
+    "mode": 0,
+    "optimizer": "adam",
+    "lr": 1,
+    "beta1": 0.9,
+    "rho": 0.95,
+    "eps": 1e-8
   },
   "feat": {
     "mode": 2,
-    "layer_position": 2
+    "optimizer": "adam",
+    "layer_position": 2,
+    "adam": 1,
+    "lr": 1,
+    "beta1": 0.9,
+    "rho": 0.95,
+    "eps": 1e-8
   },
   "seq": {
-    "mode": 1
+    "mode": 1,
+    "optimizer": "adam",
+    "adam": 1,
+    "lr": 1,
+    "beta1": 0.9,
+    "rho": 0.95,
+    "eps": 1e-8
   },
   "pred": {
-    "mode" : 1
+    "mode" : 1,
+    "optimizer": "adam",
+    "adam": 1,
+    "lr": 1,
+    "beta1": 0.9,
+    "rho": 0.95,
+    "eps": 1e-8
   }
 }

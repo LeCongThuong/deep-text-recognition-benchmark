@@ -53,7 +53,7 @@ class Model(nn.Module):
 
         """ Sequence modeling"""
         if opt.SequenceModeling == 'BiLSTM':
-            self.SequenceModeling = BiLSTM(opt.ft_config['seq'],self.FeatureExtraction_output, opt.hidden_size)
+            self.SequenceModeling = BiLSTM(opt.ft_config['seq'], self.FeatureExtraction_output, opt.hidden_size)
             self.SequenceModeling_output = opt.hidden_size
         else:
             print('No SequenceModeling module specified')
@@ -125,7 +125,7 @@ class Model(nn.Module):
         for key, value in self.stages:
             if value is not None:
                 net = getattr(self, key)
-                optimizers[key] = net.configure_optimizers()
+                optimizers[key] = net.optimizer
         return optimizers
 
     def optimize_parameters(self):

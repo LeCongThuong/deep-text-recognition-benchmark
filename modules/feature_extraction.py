@@ -84,7 +84,7 @@ class ResNet_FeatureExtractor(BaseModel):
                 else:
                     param.requires_grad = False
         else:
-            for param in self:
+            for param in self.parameters():
                 param.requires_grad = False
 
 
