@@ -138,7 +138,7 @@ class Model(nn.Module):
     def configure_optimizers(self):
         optimizers = {}
         for key, value in self.stages.items():
-            if value is not None and net.optimizer is not None:
+            if value is not None:
                 net = getattr(self, key)
                 optimizers[key] = net.optimizer
             else:
