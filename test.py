@@ -108,6 +108,7 @@ def show_model_prediction_on_val_images(images, prediction_label, prediction_con
         title_str = f"{np.round_(np.array(prediction_conf[i].cpu()), 2)}-{prune_pred[i]}-{prune_gt[i]}"
         axes[i // n_cols, i % n_cols].set_title(title_str)
     plot_name = save_dir + os.path.sep + f'iter_{iteration}.png'
+    plt.tight_layout()
     fig.savefig(plot_name)
 
 
