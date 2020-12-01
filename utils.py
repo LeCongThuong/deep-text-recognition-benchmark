@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -166,3 +167,13 @@ class Averager(object):
         if self.n_count != 0:
             res = self.sum / float(self.n_count)
         return res
+
+
+def calculate_model_params(model):
+    true_grad_parameters = filter(lambda p: p.requires_grad, model.parameters())
+    true_grad_num = sum([np.prod(p.size()) for p in true_grad_parameters])
+    false_grad_parameters = filter(lambda p: not p.requires_grad, model.parameters())
+    false_grad_num = sum([np.prod(p.size()) for p in false_grad_parameters])
+    total_params = filter(lambda p: True, model.parameters())
+    total_num = sum([np.prod(p.size()) for p in total_params])
+    return total_num, true_grad_num, false_grad_num

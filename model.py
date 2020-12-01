@@ -66,7 +66,7 @@ class Model(nn.Module):
             self.Prediction = Attention(opt.ft_config['pred'], self.SequenceModeling_output, opt.hidden_size, opt.num_class)
         else:
             raise Exception('Prediction is neither CTC or Attn')
-        self._set_parameter_requires_grad()
+        self.set_parameter_requires_grad()
         self.optimizers = self.configure_optimizers()
 
     def forward(self, input, text, is_train=True):
@@ -93,11 +93,11 @@ class Model(nn.Module):
 
         return prediction
 
-    def _set_parameter_requires_grad(self):
+    def set_parameter_requires_grad(self):
         for key, value in self.stages.items():
             if value is not None:
                 net = getattr(self, key)
-                net._set_parameter_requires_grad()
+                net.set_parameter_requires_grad()
 
     def load_pretrained_networks(self):
         checkpoint = torch.load(self.opt.saved_model)
@@ -114,8 +114,8 @@ class Model(nn.Module):
             key = key.replace('SequenceModeling.1', 'SequenceModeling.SequenceModeling.1')
         return key
 
-    def load_checkpoint(self):
-        model_path = os.path.join(f'./saved_models/{self.opt.exp_name}', self.opt.model_name)
+    def load_checkpoint(self, name):
+        model_path = os.path.join(f'./saved_models/{self.opt.exp_name}', name)
         checkpoint = torch.load(model_path)
         for key, value in self.stages.items():
             if value is not None and self.optimizers[key] is not None:
@@ -138,10 +138,8 @@ class Model(nn.Module):
     def configure_optimizers(self):
         optimizers = {}
         for key, value in self.stages.items():
-            if value is not None:
+            if value is not None and net.optimizer is not None:
                 net = getattr(self, key)
-                if net.optimizer is None:
-                    optimizers[key] = None
                 optimizers[key] = net.optimizer
             else:
                 optimizers[key] = None

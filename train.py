@@ -13,7 +13,7 @@ import torch.optim as optim
 import torch.utils.data
 import numpy as np
 
-from utils import CTCLabelConverter, CTCLabelConverterForBaiduWarpctc, AttnLabelConverter, Averager
+from utils import CTCLabelConverter, CTCLabelConverterForBaiduWarpctc, AttnLabelConverter, Averager, calculate_model_params
 from dataset import hierarchical_dataset, AlignCollate, Batch_Balanced_Dataset
 from model import Model
 from test import validation
@@ -54,23 +54,23 @@ def train(opt):
     else:
         converter = AttnLabelConverter(opt.character)
 
-    opt.num_class = len(converter.character)
 
     if opt.rgb:
         opt.input_channel = 3
     model = Model(opt)
-    model_grad_parameters = filter(lambda p: p.requires_grad, model.parameters())
-    grad_params = sum([np.prod(p.size()) for p in model_grad_parameters])
-    model_not_grad_parameters = filter(lambda p: not p.requires_grad, model.parameters())
-    not_grad_params = sum([np.prod(p.size()) for p in model_not_grad_parameters])
-    total_params = filter(lambda p: True, model.parameters())
-    total_params = sum([np.prod(p.size()) for p in total_params])
-    print("Total: ", total_params)
-    print("Num of grad params: ", grad_params)
-    print("Num of not grad params: ", not_grad_params)
+
+    opt.num_class = len(converter.character)
     print('model input parameters', opt.imgH, opt.imgW, opt.num_fiducial, opt.input_channel, opt.output_channel,
           opt.hidden_size, opt.num_class, opt.batch_max_length, opt.Transformation, opt.FeatureExtraction,
           opt.SequenceModeling, opt.Prediction)
+
+    print("Model:")
+    print(model)
+
+    total_num, true_grad_num, false_grad_num = calculate_model_params(model)
+    print("Total parameters: ", total_num)
+    print("Number of parameters requires grad: ", true_grad_num)
+    print("Number of parameters do not require grad: ", false_grad_num)
 
     # weight initialization
     for name, param in model.named_parameters():
@@ -98,12 +98,9 @@ def train(opt):
         if opt.FT:
             model.load_pretrained_networks()
         elif opt.continue_train:
-            model.load_checkpoint()
+            model.load_checkpoint(opt.model_name)
         else:
             raise Exception('Something went wrong!')
-
-    print("Model:")
-    print(model)
 
     """ setup loss """
     if 'CTC' in opt.Prediction:
@@ -118,23 +115,6 @@ def train(opt):
     # loss averager
     loss_avg = Averager()
 
-    # # filter that only require gradient decent
-    # filtered_parameters = []
-    # params_num = []
-    # for p in filter(lambda p: p.requires_grad, model.parameters()):
-    #     filtered_parameters.append(p)
-    #     params_num.append(np.prod(p.size()))
-    # print('Trainable params num : ', sum(params_num))
-    # # [print(name, p.numel()) for name, p in filter(lambda p: p[1].requires_grad, model.named_parameters())]
-    #
-    # # setup optimizer
-    # if opt.adam:
-    #     optimizer = optim.Adam(filtered_parameters, lr=opt.lr, betas=(opt.beta1, 0.999))
-    # else:
-    #     optimizer = optim.Adadelta(filtered_parameters, lr=opt.lr, rho=opt.rho, eps=opt.eps)
-    # print("Optimizer:")
-    # print(optimizer)
-    #
     # """ final options """
     # print(opt)
     with open(f'./saved_models/{opt.exp_name}/opt.txt', 'a') as opt_file:
@@ -148,13 +128,6 @@ def train(opt):
 
     """ start training """
     start_iter = 0
-    # if opt.saved_model != '':
-    #     try:
-    #         start_iter = int(opt.saved_model.split('_')[-1].split('.')[0])
-    #         print(f'continue to train, start_iter: {start_iter}')
-    #     except:
-    #         pass
-
     start_time = time.time()
     best_accuracy = -1
     best_norm_ED = -1
@@ -212,7 +185,7 @@ def train(opt):
                     model.save_checkpoints(iteration, 'best_accuracy.pth')
                 if current_norm_ED > best_norm_ED:
                     best_norm_ED = current_norm_ED
-                    model.save_checkpoints(iteration,'best_norm_ED.pth')
+                    model.save_checkpoints(iteration, 'best_norm_ED.pth')
                 best_model_log = f'{"Best_accuracy":17s}: {best_accuracy:0.3f}, {"Best_norm_ED":17s}: {best_norm_ED:0.2f}'
 
                 loss_model_log = f'{loss_log}\n{current_model_log}\n{best_model_log}'

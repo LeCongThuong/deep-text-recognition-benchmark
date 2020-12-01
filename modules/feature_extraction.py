@@ -63,7 +63,7 @@ class ResNet_FeatureExtractor(BaseModel):
     def forward(self, input):
         return self.ConvNet(input)
 
-    def _set_parameter_requires_grad(self):
+    def set_parameter_requires_grad(self):
         mode = self.optim_config['mode']
         if mode == 1:
             for param in self.parameters():

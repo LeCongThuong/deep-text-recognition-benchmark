@@ -13,7 +13,7 @@ class BaseModel(nn.Module):
         self.optim_config = opt
         self.optimizer = self.configure_optimizers()
 
-    def _set_parameter_requires_grad(self):
+    def set_parameter_requires_grad(self):
         mode = self.optim_config['mode']
         if mode == 0:
             for param in self.parameters():
