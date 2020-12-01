@@ -244,15 +244,15 @@ if __name__ == '__main__':
     parser.add_argument('--saved_model', default='', help="path to model to continue training")
     parser.add_argument('--model_name', default='model.pth', help="name of model to save during train")
     parser.add_argument('--FT', action='store_true', help='whether to do fine-tuning')
-    parser.add_argument('--ft_config_path', default='./configs/defaults_ft_configs.json', help="file contains parameters for fine tuning")
+    parser.add_argument('--ft_config_path', default='./configs/default_ft_configs.json', help="file contains parameters for fine tuning")
     parser.add_argument('--ft_config', default='', help="dict for fine tuning")
     parser.add_argument('--continue_train', action='store_true', help='whether to do continue training')
     parser.add_argument('--grad_clip', type=float, default=5, help='gradient clipping value. default=5')
     parser.add_argument('--baiduCTC', action='store_true', help='for data_filtering_off mode')
     """ Data processing """
-    parser.add_argument('--select_data', type=str, default='MJ-ST',
+    parser.add_argument('--select_data', type=str, default='/',
                         help='select training data (default is MJ-ST, which means MJ and ST used as training data)')
-    parser.add_argument('--batch_ratio', type=str, default='0.5-0.5',
+    parser.add_argument('--batch_ratio', type=str, default='1',
                         help='assign ratio for each selected data in the batch')
     parser.add_argument('--total_data_usage_ratio', type=str, default='1.0',
                         help='total data usage ratio, this ratio is multiplied to total number of data.')
