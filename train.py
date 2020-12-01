@@ -17,6 +17,7 @@ from utils import CTCLabelConverter, CTCLabelConverterForBaiduWarpctc, AttnLabel
 from dataset import hierarchical_dataset, AlignCollate, Batch_Balanced_Dataset
 from model import Model
 from test import validation
+from torch.utils.tensorboard import SummaryWriter
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -31,7 +32,6 @@ def train(opt):
     opt.batch_ratio = opt.batch_ratio.split('-')
     # train_dataset (image, label)
     train_dataset = Batch_Balanced_Dataset(opt)
-
     log = open(f'./saved_models/{opt.exp_name}/log_dataset.txt', 'a')
     AlignCollate_valid = AlignCollate(imgH=opt.imgH, imgW=opt.imgW, keep_ratio_with_pad=opt.PAD)
     valid_dataset, valid_dataset_log = hierarchical_dataset(root=opt.valid_data, opt=opt)
@@ -114,6 +114,8 @@ def train(opt):
         criterion = torch.nn.CrossEntropyLoss(ignore_index=0).to(device)  # ignore [GO] token = ignore index 0
     # loss averager
     loss_avg = Averager()
+    log_dir = f'./saved_models/{opt.exp_name}'
+    writer = SummaryWriter(log_dir)
 
     # """ final options """
     # print(opt)
@@ -159,7 +161,7 @@ def train(opt):
         cost.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), opt.grad_clip)  # gradient clipping with 5 (Default)
         model.optimize_parameters()
-
+        writer.add_scalar('train_loss', cost, iteration + 1)
         loss_avg.add(cost)
 
         # validation part
@@ -175,6 +177,8 @@ def train(opt):
 
                 # training loss and validation loss
                 loss_log = f'[{iteration+1}/{opt.num_iter}] Train loss: {loss_avg.val():0.5f}, Valid loss: {valid_loss:0.5f}, Elapsed_time: {elapsed_time:0.5f}'
+                writer.add_scalar('val_loss', valid_loss, iteration + 1)
+                writer.add_scalar('accuracy', current_accuracy, iteration + 1)
                 loss_avg.reset()
 
                 current_model_log = f'{"Current_accuracy":17s}: {current_accuracy:0.3f}, {"Current_norm_ED":17s}: {current_norm_ED:0.2f}'
