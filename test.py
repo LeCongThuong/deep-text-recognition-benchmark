@@ -220,15 +220,13 @@ def validation(model, criterion, evaluation_loader, converter, opt, iteration):
             labels = labels[:opt.num_val_images_show]
             confidence_list = confidence_score_list[:opt.num_val_images_show]
             preds_str = preds_str[:opt.num_val_images_show]
-            saved_dir = f'{opt.saved_val_images_dir}/{opt.exp_name}'
+            saved_dir = f'./saved_models/{opt.exp_name}/val_image_plots'
             os.makedirs(saved_dir, exist_ok=True)
             show_model_prediction_on_val_images(images, preds_str, confidence_list, labels, saved_dir, iteration)
             flag = False
 
-
     accuracy = n_correct / float(length_of_data) * 100
     norm_ED = norm_ED / float(length_of_data)  # ICDAR2019 Normalized Edit Distance
-
 
     return valid_loss_avg.val(), accuracy, norm_ED, preds_str, confidence_score_list, labels, infer_time, length_of_data
 

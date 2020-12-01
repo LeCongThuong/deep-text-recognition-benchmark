@@ -263,7 +263,6 @@ if __name__ == '__main__':
     parser.add_argument('--hidden_size', type=int, default=256, help='the size of the LSTM hidden state')
     parser.add_argument('--show_val_images', action='store_true', help='whether or not save the plot that show image and prediction of model')
     parser.add_argument('--num_val_images_show', type=int, default=100, help='if show_val_images is True, num of first val images will be showed on plot')
-    parser.add_argument('--saved_val_images_dir', type=str, default='./val_images_dir', help='dir to save val images')
 
     opt = parser.parse_args()
 
