@@ -71,7 +71,7 @@ class Model(nn.Module):
 
     def forward(self, input, text, is_train=True):
         """ Transformation stage """
-        if not self.stages['Trans'] == "None":
+        if not self.stages['Transformation'] == "None":
             input = self.Transformation(input)
 
         """ Feature extraction stage """
@@ -80,13 +80,13 @@ class Model(nn.Module):
         visual_feature = visual_feature.squeeze(3)
 
         """ Sequence modeling stage """
-        if self.stages['Seq'] == 'BiLSTM':
+        if self.stages['SequenceModeling'] == 'BiLSTM':
             contextual_feature = self.SequenceModeling(visual_feature)
         else:
             contextual_feature = visual_feature  # for convenience. this is NOT contextually modeled by BiLSTM
 
         """ Prediction stage """
-        if self.stages['Pred'] == 'CTC':
+        if self.stages['Prediction'] == 'CTC':
             prediction = self.Prediction(contextual_feature.contiguous())
         else:
             prediction = self.Prediction(contextual_feature.contiguous(), text, is_train, batch_max_length=self.opt.batch_max_length)
@@ -96,13 +96,22 @@ class Model(nn.Module):
     def load_pretrained_networks(self):
         checkpoint = torch.load(self.opt.saved_model)
         state_dict = self.state_dict()
+        checkpoint = {'.'.join(k.split('.')[1:]): v for k, v in checkpoint.items()}
+        checkpoint = {self.mapping_pretrained_key_to_current_model_key(k): v for k, v in checkpoint.items()}
         checkpoint = {k: v for k, v in checkpoint.items() if checkpoint[k].shape == state_dict[k].shape}
         self.load_state_dict(checkpoint, strict=False)
+
+    def mapping_pretrained_key_to_current_model_key(self, key):
+        if 'SequenceModeling.0' in key:
+            key = key.replace('SequenceModeling.0', 'SequenceModeling.SequenceModeling.0')
+        if 'SequenceModeling.1' in key:
+            key = key.replace('SequenceModeling.1', 'SequenceModeling.SequenceModeling.1')
+        return key
 
     def load_checkpoint(self):
         model_path = os.path.join(f'./saved_models/{self.opt.exp_name}', self.opt.model_name)
         checkpoint = torch.load(model_path)
-        for key, value in self.stages:
+        for key, value in self.stages.items():
             if value is not None and self.optimizers[key] is not None:
                 net = getattr(self, key)
                 net.load_state_dict(checkpoint[key])
@@ -111,7 +120,7 @@ class Model(nn.Module):
 
     def save_checkpoints(self, iteration, name):
         state_dict = {}
-        for key, value in self.stages:
+        for key, value in self.stages.items():
             if value is not None and self.optimizers[key] is not None:
                 state_dict[key] = getattr(self, key).state_dict()
                 optimizer_name = key + '_optimizer'
@@ -122,7 +131,7 @@ class Model(nn.Module):
 
     def configure_optimizers(self):
         optimizers = {}
-        for key, value in self.stages:
+        for key, value in self.stages.items():
             if value is not None:
                 net = getattr(self, key)
                 if net.optimizer is None:
@@ -133,6 +142,6 @@ class Model(nn.Module):
         return optimizers
 
     def optimize_parameters(self):
-        for key, value in self.optimizers:
+        for key, value in self.optimizers.items():
             if value is not None:
                 value.steps()

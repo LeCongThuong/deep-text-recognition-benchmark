@@ -79,14 +79,16 @@ def train(opt):
             continue
 
     # data parallel for multi-GPU
-    model = model.to(device)
+    model = torch.nn.DataParallel(model).to(device)
     model.train()
+    if isinstance(model, torch.nn.DataParallel):
+        model = model.module
     # load pretrained model
     if opt.saved_model != '':
         print(f'loading pretrained model from {opt.saved_model}')
         if opt.FT:
             model.load_pretrained_networks()
-        if opt.continue_train:
+        elif opt.continue_train:
             model.load_checkpoint()
         else:
             raise Exception('Something went wrong!')
