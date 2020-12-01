@@ -103,7 +103,7 @@ class Model(nn.Module):
         model_path = os.path.join(f'./saved_models/{self.opt.exp_name}', self.opt.model_name)
         checkpoint = torch.load(model_path)
         for key, value in self.stages:
-            if value is not None:
+            if value is not None and self.optimizers[key] is not None:
                 net = getattr(self, key)
                 net.load_state_dict(checkpoint[key])
                 optimizer_name = key + '_optimizer'
@@ -112,7 +112,7 @@ class Model(nn.Module):
     def save_checkpoints(self, iteration, name):
         state_dict = {}
         for key, value in self.stages:
-            if value is not None:
+            if value is not None and self.optimizers[key] is not None:
                 state_dict[key] = getattr(self, key).state_dict()
                 optimizer_name = key + '_optimizer'
                 state_dict[optimizer_name] = self.optimizers[key]
@@ -125,9 +125,14 @@ class Model(nn.Module):
         for key, value in self.stages:
             if value is not None:
                 net = getattr(self, key)
+                if net.optimizer is None:
+                    optimizers[key] = None
                 optimizers[key] = net.optimizer
+            else:
+                optimizers[key] = None
         return optimizers
 
     def optimize_parameters(self):
-        for optimizer in self.optimizers:
-            optimizer.steps()
+        for key, value in self.optimizers:
+            if value is not None:
+                value.steps()
