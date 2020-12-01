@@ -63,13 +63,6 @@ class ResNet_FeatureExtractor(BaseModel):
     def forward(self, input):
         return self.ConvNet(input)
 
-    @staticmethod
-    def _check_whether_update_resnet_grad_feat(self, name_parameter, layer_postion):
-        layers = name_parameter.split('.')[1]
-        layer = int(re.findall('\d+', layers)[0])
-        if layer <= layer_postion:
-            return False
-
     def _set_parameter_requires_grad(self):
         mode = self.optim_config['mode']
         if mode == 1:
@@ -78,7 +71,7 @@ class ResNet_FeatureExtractor(BaseModel):
         elif mode == 2:
             layer_position = self.optim_config['layer_position']
             for name, param in self.named_parameters():
-                can_update = self._check_whether_update_resnet_grad_feat(name, layer_position)
+                can_update = _check_whether_update_resnet_grad_feat(name, layer_position)
                 if can_update:
                     param.requires_grad = True
                 else:
@@ -86,6 +79,13 @@ class ResNet_FeatureExtractor(BaseModel):
         else:
             for param in self.parameters():
                 param.requires_grad = False
+
+
+def _check_whether_update_resnet_grad_feat(name_parameter, layer_postion):
+    layers = name_parameter.split('.')[1]
+    layer = int(re.findall('\d+', layers)[0])
+    if layer <= layer_postion:
+        return False
 
 
 # For Gated RCNN

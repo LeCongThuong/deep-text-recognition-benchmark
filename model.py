@@ -66,7 +66,7 @@ class Model(nn.Module):
             self.Prediction = Attention(opt.ft_config['pred'], self.SequenceModeling_output, opt.hidden_size, opt.num_class)
         else:
             raise Exception('Prediction is neither CTC or Attn')
-
+        self._set_parameter_requires_grad()
         self.optimizers = self.configure_optimizers()
 
     def forward(self, input, text, is_train=True):
@@ -92,6 +92,12 @@ class Model(nn.Module):
             prediction = self.Prediction(contextual_feature.contiguous(), text, is_train, batch_max_length=self.opt.batch_max_length)
 
         return prediction
+
+    def _set_parameter_requires_grad(self):
+        for key, value in self.stages.items():
+            if value is not None:
+                net = getattr(self, key)
+                net._set_parameter_requires_grad()
 
     def load_pretrained_networks(self):
         checkpoint = torch.load(self.opt.saved_model)

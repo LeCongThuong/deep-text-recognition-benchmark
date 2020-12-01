@@ -23,7 +23,6 @@ class BaseModel(nn.Module):
                 param.requires_grad = True
 
     def configure_optimizers(self):
-        self._set_parameter_requires_grad()
         filtered_params = self._filter_required_params()
         if len(filtered_params) == 0:
             return None

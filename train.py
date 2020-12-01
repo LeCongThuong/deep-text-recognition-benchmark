@@ -59,6 +59,15 @@ def train(opt):
     if opt.rgb:
         opt.input_channel = 3
     model = Model(opt)
+    model_grad_parameters = filter(lambda p: p.requires_grad, model.parameters())
+    grad_params = sum([np.prod(p.size()) for p in model_grad_parameters])
+    model_not_grad_parameters = filter(lambda p: not p.requires_grad, model.parameters())
+    not_grad_params = sum([np.prod(p.size()) for p in model_not_grad_parameters])
+    total_params = filter(lambda p: True, model.parameters())
+    total_params = sum([np.prod(p.size()) for p in total_params])
+    print("Total: ", total_params)
+    print("Num of grad params: ", grad_params)
+    print("Num of not grad params: ", not_grad_params)
     print('model input parameters', opt.imgH, opt.imgW, opt.num_fiducial, opt.input_channel, opt.output_channel,
           opt.hidden_size, opt.num_class, opt.batch_max_length, opt.Transformation, opt.FeatureExtraction,
           opt.SequenceModeling, opt.Prediction)
@@ -258,7 +267,7 @@ if __name__ == '__main__':
                         help='assign ratio for each selected data in the batch')
     parser.add_argument('--total_data_usage_ratio', type=str, default='1.0',
                         help='total data usage ratio, this ratio is multiplied to total number of data.')
-    parser.add_argument('--batch_max_length', type=int, default=40, help='maximum-label-length')
+    parser.add_argument('--batch_max_length', type=int, default=60, help='maximum-label-length')
     parser.add_argument('--imgH', type=int, default=32, help='the height of the input image')
     parser.add_argument('--imgW', type=int, default=100, help='the width of the input image')
     parser.add_argument('--rgb', action='store_true', help='use rgb input')

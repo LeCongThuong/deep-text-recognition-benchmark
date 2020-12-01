@@ -99,7 +99,7 @@ def show_model_prediction_on_val_images(images, prediction_label, prediction_con
         prune_gt.append(every_gt)
         prune_pred.append(every_pred)
 
-    num_images = images.shape[0]
+        num_images = images.shape[0]
     n_cols = 5
     n_rows = num_images // n_cols if num_images % n_cols == 0 else num_images // n_cols + 1
     fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(24, 18))
@@ -119,6 +119,7 @@ def validation(model, criterion, evaluation_loader, converter, opt, iteration):
     infer_time = 0
     valid_loss_avg = Averager()
 
+    flag = True
     for i, (image_tensors, labels) in enumerate(evaluation_loader):
         batch_size = image_tensors.size(0)
         length_of_data = length_of_data + batch_size
@@ -213,17 +214,20 @@ def validation(model, criterion, evaluation_loader, converter, opt, iteration):
                 confidence_score = 0  # for empty pred case, when prune after "end of sentence" token ([s])
             confidence_score_list.append(confidence_score)
             # print(pred, gt, pred==gt, confidence_score)
+        if opt.show_val_images and flag:
+            images = image.detach().cpu().numpy()[:opt.num_val_images_show]
+            labels = labels[:opt.num_val_images_show]
+            confidence_list = confidence_score_list[:opt.num_val_images_show]
+            preds_str = preds_str[:opt.num_val_images_show]
+            saved_dir = f'{opt.saved_val_images_dir}/{opt.exp_name}'
+            os.makedirs(saved_dir, exist_ok=True)
+            show_model_prediction_on_val_images(images, preds_str, confidence_list, labels, saved_dir, iteration)
+            flag = False
+
 
     accuracy = n_correct / float(length_of_data) * 100
     norm_ED = norm_ED / float(length_of_data)  # ICDAR2019 Normalized Edit Distance
-    if opt.show_val_images:
-        images = image.detach().cpu().numpy()[:opt.num_val_images_show]
-        labels = labels[:opt.num_val_images_show]
-        confidence_list = confidence_score_list[:opt.num_val_images_show]
-        preds_str = preds_str[:opt.num_val_images_show]
-        saved_dir = f'{opt.saved_val_images_dir}/{opt.exp_name}'
-        os.makedirs(saved_dir, exist_ok=True)
-        show_model_prediction_on_val_images(images, preds_str, confidence_list, labels, saved_dir, iteration)
+
 
     return valid_loss_avg.val(), accuracy, norm_ED, preds_str, confidence_score_list, labels, infer_time, length_of_data
 
@@ -290,7 +294,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=192, help='input batch size')
     parser.add_argument('--saved_model', required=True, help="path to saved_model to evaluation")
     """ Data processing """
-    parser.add_argument('--batch_max_length', type=int, default=25, help='maximum-label-length')
+    parser.add_argument('--batch_max_length', type=int, default=60, help='maximum-label-length')
     parser.add_argument('--imgH', type=int, default=32, help='the height of the input image')
     parser.add_argument('--imgW', type=int, default=100, help='the width of the input image')
     parser.add_argument('--rgb', action='store_true', help='use rgb input')
@@ -313,8 +317,8 @@ if __name__ == '__main__':
     opt = parser.parse_args()
 
     """ vocab / character number configuration """
-    if opt.sensitive:
-        opt.character = string.printable[:-6]  # same with ASTER setting (use 94 char).
+    # if opt.sensitive:
+    #     opt.character = string.printable[:-6]  # same with ASTER setting (use 94 char).
 
     cudnn.benchmark = True
     cudnn.deterministic = True
