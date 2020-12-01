@@ -1,7 +1,7 @@
 {
   "trans": {
     "mode": 0,
-    "optimizer": "adam",
+    "optimizer": "Adadelta",
     "lr": 1,
     "beta1": 0.9,
     "rho": 0.95,
