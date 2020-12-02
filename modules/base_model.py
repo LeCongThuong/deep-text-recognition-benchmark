@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import numpy as np
 
 
 class BaseModel(nn.Module):
@@ -37,3 +38,12 @@ class BaseModel(nn.Module):
         for p in filter(lambda p: p.requires_grad, self.parameters()):
             filtered_parameters.append(p)
         return filtered_parameters
+
+    def make_statistics_params(self):
+        true_grad_parameters = filter(lambda p: p.requires_grad, self.parameters())
+        true_grad_num = sum([np.prod(p.size()) for p in true_grad_parameters])
+        false_grad_parameters = filter(lambda p: not p.requires_grad, self.parameters())
+        false_grad_num = sum([np.prod(p.size()) for p in false_grad_parameters])
+        total_params = filter(lambda p: True, self.parameters())
+        total_num = sum([np.prod(p.size()) for p in total_params])
+        return total_num, true_grad_num, false_grad_num
