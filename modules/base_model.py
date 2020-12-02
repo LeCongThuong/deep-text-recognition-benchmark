@@ -27,7 +27,8 @@ class BaseModel(nn.Module):
         if self.optim_config['optimizer'] == 'adam':
             optimizer = optim.Adam(filtered_params, lr=self.optim_config['lr'], betas=(self.optim_config['beta1'], 0.999))
         else:
-            optimizer = optim.Adadelta(filtered_params, lr=self.optim_config['lr'], rho=self.optim_config['rho'], eps=self.optim_config['eps'])
+            optimizer = optim.Adadelta(filtered_params, lr=self.optim_config['lr'], rho=self.optim_config['rho'],
+                                       eps=self.optim_config['eps'])
         return optimizer
 
     def _filter_required_params(self):

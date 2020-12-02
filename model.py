@@ -69,6 +69,7 @@ class Model(nn.Module):
             raise Exception('Prediction is neither CTC or Attn')
         self.set_parameter_requires_grad()
         self.optimizers = self.configure_optimizers()
+        self.make_statistics_params()
 
     def forward(self, input, text, is_train=True):
         """ Transformation stage """
@@ -104,16 +105,9 @@ class Model(nn.Module):
         checkpoint = torch.load(self.opt.saved_model)
         state_dict = self.state_dict()
         checkpoint = {'.'.join(k.split('.')[1:]): v for k, v in checkpoint.items()}
-        checkpoint = {self.mapping_pretrained_key_to_current_model_key(k): v for k, v in checkpoint.items()}
+        checkpoint = {mapping_pretrained_key_to_current_model_key(k): v for k, v in checkpoint.items()}
         checkpoint = {k: v for k, v in checkpoint.items() if checkpoint[k].shape == state_dict[k].shape}
         self.load_state_dict(checkpoint, strict=False)
-
-    def mapping_pretrained_key_to_current_model_key(self, key):
-        if 'SequenceModeling.0' in key:
-            key = key.replace('SequenceModeling.0', 'SequenceModeling.SequenceModeling.0')
-        if 'SequenceModeling.1' in key:
-            key = key.replace('SequenceModeling.1', 'SequenceModeling.SequenceModeling.1')
-        return key
 
     def load_checkpoint(self, name):
         model_path = os.path.join(f'./saved_models/{self.opt.exp_name}', name)
@@ -140,13 +134,34 @@ class Model(nn.Module):
         optimizers = {}
         for key, value in self.stages.items():
             if value is not None:
+                print("In if branch")
                 net = getattr(self, key)
-                optimizers[key] = net.optimizer
+                print("Class: ", net.__class__)
+                optimizers[key] = net.configure_optimizers()
             else:
                 optimizers[key] = None
+        print("All optimizers: ", optimizers)
         return optimizers
 
     def optimize_parameters(self):
         for key, value in self.optimizers.items():
             if value is not None:
-                value.steps()
+                value.step()
+
+    def make_statistics_params(self):
+        for key, value in self.stages.items():
+            if value is not None:
+                net = getattr(self, key)
+                total_num, true_grad_num, false_grad_num = calculate_model_params(net)
+                print("Net: ", net.__class__)
+                print("Total parameters: ", total_num)
+                print("Number of parameters requires grad: ", true_grad_num)
+                print("Number of parameters do not require grad: ", false_grad_num)
+
+
+def mapping_pretrained_key_to_current_model_key(key):
+    if 'SequenceModeling.0' in key:
+        key = key.replace('SequenceModeling.0', 'SequenceModeling.SequenceModeling.0')
+    if 'SequenceModeling.1' in key:
+        key = key.replace('SequenceModeling.1', 'SequenceModeling.SequenceModeling.1')
+    return key
