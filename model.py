@@ -140,12 +140,13 @@ class Model(nn.Module):
         for key, value in self.stages.items():
             if value is not None:
                 net = getattr(self, key)
-                optimizers[key] = net.optimizer
+                optimizers[key] = net.configure_optimizers()
             else:
                 optimizers[key] = None
+        print("All optimizers: ", optimizers)
         return optimizers
 
     def optimize_parameters(self):
         for key, value in self.optimizers.items():
             if value is not None:
-                value.steps()
+                value.step()

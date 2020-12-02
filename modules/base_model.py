@@ -11,7 +11,6 @@ class BaseModel(nn.Module):
         """
         super(BaseModel, self).__init__()
         self.optim_config = opt
-        self.optimizer = self.configure_optimizers()
 
     def set_parameter_requires_grad(self):
         mode = self.optim_config['mode']
