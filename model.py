@@ -21,6 +21,7 @@ from modules.feature_extraction import VGG_FeatureExtractor, RCNN_FeatureExtract
 from modules.sequence_modeling import BiLSTM
 from modules.prediction import Attention, CTC_Prediction
 import torch
+from utils import calculate_model_params
 
 
 class Model(nn.Module):
@@ -140,13 +141,12 @@ class Model(nn.Module):
         for key, value in self.stages.items():
             if value is not None:
                 net = getattr(self, key)
-                optimizers[key] = net.configure_optimizers()
+                optimizers[key] = net.optimizer
             else:
                 optimizers[key] = None
-        print("All optimizers: ", optimizers)
         return optimizers
 
     def optimize_parameters(self):
         for key, value in self.optimizers.items():
             if value is not None:
-                value.step()
+                value.steps()

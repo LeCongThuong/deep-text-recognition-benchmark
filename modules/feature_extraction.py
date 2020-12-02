@@ -86,6 +86,7 @@ def _check_whether_update_resnet_grad_feat(name_parameter, layer_postion):
     layer = int(re.findall('\d+', layers)[0])
     if layer <= layer_postion:
         return False
+    return True
 
 
 # For Gated RCNN
