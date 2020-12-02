@@ -21,6 +21,7 @@ from modules.feature_extraction import VGG_FeatureExtractor, RCNN_FeatureExtract
 from modules.sequence_modeling import BiLSTM
 from modules.prediction import Attention, CTC_Prediction
 import torch
+from utils import calculate_model_params
 
 
 class Model(nn.Module):
@@ -148,7 +149,7 @@ class Model(nn.Module):
         for key, value in self.stages.items():
             if value is not None:
                 net = getattr(self, key)
-                total_num, true_grad_num, false_grad_num = net.make_statistics_params()
+                total_num, true_grad_num, false_grad_num = calculate_model_params(net)
                 print("Net: ", net.__class__)
                 print("Total parameters: ", total_num)
                 print("Number of parameters requires grad: ", true_grad_num)
