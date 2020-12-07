@@ -89,7 +89,7 @@ def show_model_prediction_on_val_images(images, prediction_label, prediction_con
         prediction_conf : float list: (batch_size, )
         gt: ground truth label of images
         save_dir : where to save plot
-        iteration :
+        iteration : the iteration when evaluation is done
     """
     prune_gt = []
     prune_pred = []
@@ -105,7 +105,8 @@ def show_model_prediction_on_val_images(images, prediction_label, prediction_con
     fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(24, 18))
     for i in range(num_images):
         axes[i // n_cols, i % n_cols].imshow(images[i].squeeze(0))
-        title_str = f"{np.round_(np.array(prediction_conf[i].cpu()), 2)}-{prune_pred[i]}-{prune_gt[i]}"
+        # title_str = f"{np.round_(np.array(prediction_conf[i].cpu()), 2)}-{prune_pred[i]}-{prune_gt[i]}"
+        title_str = f"{prune_pred[i]}-{prune_gt[i]}"
         axes[i // n_cols, i % n_cols].set_title(title_str)
     plot_name = save_dir + os.path.sep + f'iter_{iteration}.png'
     plt.tight_layout()
