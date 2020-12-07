@@ -5,7 +5,8 @@ import torch
 import torch.backends.cudnn as cudnn
 import torch.utils.data
 import torch.nn.functional as F
-
+import os
+import json
 from utils import CTCLabelConverter, AttnLabelConverter
 from dataset import RawDataset, AlignCollate
 from model import Model
@@ -30,7 +31,7 @@ def demo(opt):
 
     # load model
     print('loading pretrained model from %s' % opt.saved_model)
-    model.load_state_dict(torch.load(opt.saved_model, map_location=device))
+    model.load_checkpoint('')
 
     # prepare data. two demo images from https://github.com/bgshih/crnn#run-demo
     AlignCollate_demo = AlignCollate(imgH=opt.imgH, imgW=opt.imgW, keep_ratio_with_pad=opt.PAD)
@@ -94,10 +95,14 @@ def demo(opt):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--exp_name', help='Where to store logs and models')
+    parser.add_argument('--manualSeed', type=int, default=1111, help='for random seed setting')
     parser.add_argument('--image_folder', required=True, help='path to image_folder which contains text images')
     parser.add_argument('--workers', type=int, help='number of data loading workers', default=4)
     parser.add_argument('--batch_size', type=int, default=192, help='input batch size')
     parser.add_argument('--saved_model', required=True, help="path to saved_model to evaluation")
+    parser.add_argument('--ft_config_path', default='./configs/default_ft_configs.json', help="file contains parameters for fine tuning")
+    parser.add_argument('--ft_config', default='', help="dict for fine tuning")
     """ Data processing """
     parser.add_argument('--batch_max_length', type=int, default=30, help='maximum-label-length')
     parser.add_argument('--imgH', type=int, default=32, help='the height of the input image')
@@ -122,6 +127,11 @@ if __name__ == '__main__':
     """ vocab / character number configuration """
     # if opt.sensitive:
     #     opt.character = string.printable[:-6]  # same with ASTER setting (use 94 char).
+    os.makedirs(f'./saved_models/{opt.exp_name}', exist_ok=True)
+
+    """Load optimization config for training process"""
+    with open(opt.ft_config_path, 'r') as f:
+        opt.ft_config = json.load(f)
 
     cudnn.benchmark = True
     cudnn.deterministic = True
