@@ -1,6 +1,6 @@
 {
   "trans": {
-    "mode": 0,
+    "mode": 1,
     "optimizer": "Adadelta",
     "lr": 0.7,
     "beta1": 0.9,
@@ -8,10 +8,10 @@
     "eps": 1e-8
   },
   "feat": {
-    "mode": 2,
+    "mode": 1,
     "optimizer": "Adadelta",
     "layer_position": 1,
-    "lr": 0.6,
+    "lr": 0.7,
     "beta1": 0.9,
     "rho": 0.95,
     "eps": 1e-8
@@ -19,7 +19,7 @@
   "seq": {
     "mode": 1,
     "optimizer": "Adadelta",
-    "lr": 0.6,
+    "lr": 0.7,
     "beta1": 0.9,
     "rho": 0.95,
     "eps": 1e-8
@@ -27,7 +27,7 @@
   "pred": {
     "mode" : 1,
     "optimizer": "Adadelta",
-    "lr": 0.6,
+    "lr": 0.7,
     "beta1": 0.9,
     "rho": 0.95,
     "eps": 1e-8

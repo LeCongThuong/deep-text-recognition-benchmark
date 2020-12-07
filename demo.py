@@ -99,7 +99,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=192, help='input batch size')
     parser.add_argument('--saved_model', required=True, help="path to saved_model to evaluation")
     """ Data processing """
-    parser.add_argument('--batch_max_length', type=int, default=40, help='maximum-label-length')
+    parser.add_argument('--batch_max_length', type=int, default=30, help='maximum-label-length')
     parser.add_argument('--imgH', type=int, default=32, help='the height of the input image')
     parser.add_argument('--imgW', type=int, default=100, help='the width of the input image')
     parser.add_argument('--rgb', action='store_true', help='use rgb input')
