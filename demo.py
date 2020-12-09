@@ -82,7 +82,6 @@ def demo(opt):
 
             preds_prob = F.softmax(preds, dim=2)
             preds_max_prob, _ = preds_prob.max(dim=2)
-            img_name_list = []
             pred_str_list = []
             for img_name, pred, pred_max_prob in zip(image_path_list, preds_str, preds_max_prob):
                 if 'Attn' in opt.Prediction:
@@ -92,12 +91,11 @@ def demo(opt):
 
                 # calculate confidence score (= multiply of pred_max_prob)
                 confidence_score = pred_max_prob.cumprod(dim=0)[-1]
-                img_name_list.append(img_name)
                 pred_str_list.append(pred)
                 print(f'{img_name:25s}\t{pred:25s}\t{confidence_score:0.4f}')
                 log.write(f'{img_name:25s}\t{pred:25s}\t{confidence_score:0.4f}\n')
             # show prediction with image on plot and save to ./saved_models/{opt.exp_name}
-            show_pred_on_test_images(image_tensors, img_name_list, pred_str_list, count, f'./saved_models/{opt.exp_name}')
+            show_pred_on_test_images(image_tensors, pred_str_list, count, f'./saved_models/{opt.exp_name}')
             log.close()
             count = count + 1
 
