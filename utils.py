@@ -1,7 +1,8 @@
 import torch
 import numpy as np
+import matplotlib.pyplot as plt
+import os
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 
 class CTCLabelConverter(object):
     """ Convert between text-label and text-index """
@@ -177,3 +178,18 @@ def calculate_model_params(model):
     total_params = filter(lambda p: True, model.parameters())
     total_num = sum([np.prod(p.size()) for p in total_params])
     return total_num, true_grad_num, false_grad_num
+
+
+def show_pred_on_test_images(image_tensors, img_name_list, pred_str_list, count, saved_dir):
+    batch_size = image_tensors.size(0)
+    ncols = 16
+    nrows = batch_size // ncols if batch_size % ncols == 0 else batch_size // ncols + 1
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(24, 18))
+    for i in range(batch_size):
+        axes[i // ncols, i % ncols].imshow(image_tensors[i].permute(1, 2, 0))
+        title_str = f'{img_name_list[i]}--f{pred_str_list[i]}'
+        axes.set_title(title_str)
+    test_image_result_dir = saved_dir + os.path.sep + 'test_image_result'
+    os.makedirs(test_image_result_dir, exist_ok=True)
+    plot_path = test_image_result_dir + os.path.sep + f'batch_{count}.jpeg'
+    plt.savefig(plot_path)

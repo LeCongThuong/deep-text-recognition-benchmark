@@ -10,6 +10,7 @@ import json
 from utils import CTCLabelConverter, AttnLabelConverter
 from dataset import RawDataset, AlignCollate
 from model import Model
+from utils import show_pred_on_test_images
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -29,9 +30,11 @@ def demo(opt):
           opt.SequenceModeling, opt.Prediction)
     model = torch.nn.DataParallel(model).to(device)
 
+    if isinstance(model, torch.nn.DataParallel):
+        model = model.module
     # load model
-    print('loading pretrained model from %s' % opt.saved_model)
-    model.load_checkpoint('')
+    # print('loading pretrained model from %s' % opt.saved_model)
+    model.load_checkpoint(opt.model_name)
 
     # prepare data. two demo images from https://github.com/bgshih/crnn#run-demo
     AlignCollate_demo = AlignCollate(imgH=opt.imgH, imgW=opt.imgW, keep_ratio_with_pad=opt.PAD)
@@ -44,6 +47,7 @@ def demo(opt):
 
     # predict
     model.eval()
+    count = 0
     with torch.no_grad():
         for image_tensors, image_path_list in demo_loader:
             batch_size = image_tensors.size(0)
@@ -78,6 +82,8 @@ def demo(opt):
 
             preds_prob = F.softmax(preds, dim=2)
             preds_max_prob, _ = preds_prob.max(dim=2)
+            img_name_list = []
+            pred_str_list = []
             for img_name, pred, pred_max_prob in zip(image_path_list, preds_str, preds_max_prob):
                 if 'Attn' in opt.Prediction:
                     pred_EOS = pred.find('[s]')
@@ -86,11 +92,14 @@ def demo(opt):
 
                 # calculate confidence score (= multiply of pred_max_prob)
                 confidence_score = pred_max_prob.cumprod(dim=0)[-1]
-
+                img_name_list.append(img_name)
+                pred_str_list.append(pred)
                 print(f'{img_name:25s}\t{pred:25s}\t{confidence_score:0.4f}')
                 log.write(f'{img_name:25s}\t{pred:25s}\t{confidence_score:0.4f}\n')
-
+            # show prediction with image on plot and save to ./saved_models/{opt.exp_name}
+            show_pred_on_test_images(image_tensors, img_name_list, pred_str_list, count, f'./saved_models/{opt.exp_name}')
             log.close()
+            count = count + 1
 
 
 if __name__ == '__main__':
@@ -121,6 +130,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_channel', type=int, default=512,
                         help='the number of output channel of Feature extractor')
     parser.add_argument('--hidden_size', type=int, default=256, help='the size of the LSTM hidden state')
+    parser.add_argument('--model_name', default='model.pth', help="name of model to save during train")
 
     opt = parser.parse_args()
 
@@ -128,6 +138,10 @@ if __name__ == '__main__':
     # if opt.sensitive:
     #     opt.character = string.printable[:-6]  # same with ASTER setting (use 94 char).
     os.makedirs(f'./saved_models/{opt.exp_name}', exist_ok=True)
+
+    if not opt.exp_name:
+        opt.exp_name = f'{opt.Transformation}-{opt.FeatureExtraction}-{opt.SequenceModeling}-{opt.Prediction}'
+        opt.exp_name += f'-Seed{opt.manualSeed}'
 
     """Load optimization config for training process"""
     with open(opt.ft_config_path, 'r') as f:
