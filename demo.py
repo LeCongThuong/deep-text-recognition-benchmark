@@ -115,7 +115,7 @@ if __name__ == '__main__':
     parser.add_argument('--imgH', type=int, default=32, help='the height of the input image')
     parser.add_argument('--imgW', type=int, default=100, help='the width of the input image')
     parser.add_argument('--rgb', action='store_true', help='use rgb input')
-    parser.add_argument('--character', type=str, default='0123456789aAàÀảẢãÃáÁạẠăĂằẰẳẲẵẴắẮặẶâÂầẦẩẨẫẪấẤậẬbBcCdDđĐeEèÈẻẺẽẼéÉẹẸêÊềỀểỂễỄếẾệỆfFgGhHiIìÌỉỈĩĨíÍịỊjJkKlLmMnNoO ', help='character label')
+    parser.add_argument('--character', type=str, default='hjbóẺoÝLvÚẼÁÂẩởĨỈtgKứẾmŨÒWsăỷịơIÔỀửãùaXP9ẰẳỉẹỶzầẪâỸỎảệyOựỬẵỘxCỐlỲD6ộỦỒĂƠÌồ1áTFnỆpHẽờếỏẢYẨUắƯẦíÃẤJèýẲ2i4ẬỊÊÓớR7ÙÕàGỨềỳecêSéừqQạòấỮ0ốẫ5õfỗđỡúNũỤợỖỠMằẸôỚặuỌỞụÀEkĐÉBưẮ3ỂễAìỜủỔỢổọwậdZĩẻ8ỄỰểrÈẴÍỪẶẠữỹV ', help='character label')
     parser.add_argument('--sensitive', action='store_true', help='for sensitive character mode')
     parser.add_argument('--PAD', action='store_true', help='whether to keep ratio then pad for image resize')
     """ Model Architecture """
@@ -135,11 +135,11 @@ if __name__ == '__main__':
     """ vocab / character number configuration """
     # if opt.sensitive:
     #     opt.character = string.printable[:-6]  # same with ASTER setting (use 94 char).
-    os.makedirs(f'./saved_models/{opt.exp_name}', exist_ok=True)
-
     if not opt.exp_name:
         opt.exp_name = f'{opt.Transformation}-{opt.FeatureExtraction}-{opt.SequenceModeling}-{opt.Prediction}'
         opt.exp_name += f'-Seed{opt.manualSeed}'
+
+    os.makedirs(f'./saved_models/{opt.exp_name}', exist_ok=True)
 
     """Load optimization config for training process"""
     with open(opt.ft_config_path, 'r') as f:
