@@ -7,7 +7,7 @@ import lmdb
 import torch
 
 from natsort import natsorted
-from PIL import Image
+from PIL import Image, ImageOps
 import numpy as np
 from torch.utils.data import Dataset, ConcatDataset, Subset
 from torch._utils import _accumulate
@@ -336,16 +336,12 @@ class AlignCollate(object):
         # type of images perhaps is PIL object
         if self.keep_ratio_with_pad:  # same concept with 'Rosetta' paper
             resized_max_w = self.imgW
-            input_channel = 3 if images[0].mode == 'RGB' else 1
-            # create transform objects. This object will normalize [-1, 1] and resize img width is less
-            # than resized_max_w
-            transform = NormalizePAD((input_channel, self.imgH, resized_max_w))
 
             resized_images = []
             for image in images:
                 if self.is_training:
                     image = imgaug(image)
-
+                image = ImageOps.grayscale(image)
                 w, h = image.size
                 ratio = w / float(h)
                 # image height will be resize to self.imgH
@@ -361,6 +357,9 @@ class AlignCollate(object):
                 resized_image = image.resize((resized_w, self.imgH), Image.BICUBIC)
 
                 # padding right size of image to self.imageW
+                # create transform objects. This object will normalize [-1, 1] and resize img width is less
+                # than resized_max_w
+                transform = NormalizePAD((1, self.imgH, resized_max_w))
                 resized_images.append(transform(resized_image))
                 # resized_image.save('./image_test/%d_test.jpg' % w)
 
@@ -370,6 +369,7 @@ class AlignCollate(object):
         else:
             if self.is_training:
                 images = [imgaug(image) for image in images]
+            images = [ImageOps.grayscale(image) for image in images]
             transform = ResizeNormalize((self.imgW, self.imgH))
             image_tensors = [transform(image) for image in images]
             image_tensors = torch.cat([t.unsqueeze(0) for t in image_tensors], 0)
