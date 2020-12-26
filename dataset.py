@@ -12,7 +12,7 @@ import numpy as np
 from torch.utils.data import Dataset, ConcatDataset, Subset
 from torch._utils import _accumulate
 import torchvision.transforms as transforms
-from utils.augmentation import ImgAugTransform
+from util.augmentation import ImgAugTransform
 
 
 class Batch_Balanced_Dataset(object):
@@ -217,10 +217,6 @@ class LmdbDataset(Dataset):
             except IOError:
                 print(f'Corrupted image for {index}')
                 # make dummy image and dummy label for corrupted image.
-                if self.opt.rgb:
-                    img = Image.new('RGB', (self.opt.imgW, self.opt.imgH))
-                else:
-                    img = Image.new('L', (self.opt.imgW, self.opt.imgH))
                 label = '[dummy_label]'
 
             if not self.opt.sensitive:
