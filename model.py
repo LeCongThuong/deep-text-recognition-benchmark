@@ -21,7 +21,7 @@ from modules.feature_extraction import VGG_FeatureExtractor, RCNN_FeatureExtract
 from modules.sequence_modeling import BiLSTM
 from modules.prediction import Attention, CTC_Prediction
 import torch
-from util import calculate_model_params
+from utils import calculate_model_params
 
 
 class Model(nn.Module):
