@@ -1,81 +1,53 @@
-import utils.ocrodeg as ocrodeg
-from albumentations.core.transforms_interface import ImageOnlyTransform
-import random
-import scipy.ndimage as ndi
-import math
+from PIL import Image
+import numpy as np
+import imgaug.augmenters as iaa
+import imgaug as ia
+
+from PIL import Image
+import numpy as np
+import imgaug.augmenters as iaa
+import imgaug as ia
 
 
-def rotate_word(image, min_angle=-10, max_angle=10):
-    angle = random.randint(min_angle, max_angle)
-    transformed_image = ocrodeg.transform_image(image, angle=angle * math.pi / 180)
-    return transformed_image
+class ImgAugTransform:
+    def __init__(self):
+        sometimes = lambda aug: iaa.Sometimes(0.3, aug)
 
+        self.aug = iaa.Sequential(iaa.SomeOf((1, 5),
+                                             [
+                                                 # blur
 
-class RotateWord(ImageOnlyTransform):
-    def __init__(self, min_angle, max_angle, always_apply=False, p=1):
-        super(RotateWord, self).__init__(always_apply, p)
-        self.min_angle = min_angle
-        self.max_angle = max_angle
+                                                 sometimes(iaa.OneOf([iaa.GaussianBlur(sigma=(0, 1.0)),
+                                                                      iaa.MotionBlur(k=3)])),
 
-    def apply(self, img, **params):
-        return rotate_word(img, self.min_angle, self.max_angle)
+                                                 # color
+                                                 sometimes(iaa.AddToHueAndSaturation(value=(-10, 10), per_channel=True)),
+                                                 sometimes(iaa.SigmoidContrast(gain=(3, 10), cutoff=(0.4, 0.6), per_channel=True)),
+                                                 sometimes(iaa.Invert(0.25, per_channel=0.5)),
+                                                 sometimes(iaa.Solarize(0.5, threshold=(32, 128))),
+                                                 sometimes(iaa.Dropout2d(p=0.5)),
+                                                 sometimes(iaa.Multiply((0.5, 1.5), per_channel=0.5)),
+                                                 sometimes(iaa.Add((-40, 40), per_channel=0.5)),
 
+                                                 sometimes(iaa.JpegCompression(compression=(5, 80))),
 
-def space_between_chacracter(image, aniso_list):
-    aniso = aniso_list[random.randrange(len(aniso_list))]
-    transformed_image = ocrodeg.transform_image(image, aniso=aniso)
-    return transformed_image
+                                                 # distort
+                                                 sometimes(iaa.Crop(percent=(0.01, 0.05), sample_independently=True)),
+                                                 sometimes(iaa.PerspectiveTransform(scale=(0.01, 0.01))),
+                                                 sometimes(iaa.Affine(scale=(0.7, 1.3), translate_percent=(-0.1, 0.1),
+                                                                      #                            rotate=(-5, 5), shear=(-5, 5),
+                                                                      order=[0, 1], cval=(0, 255),
+                                                                      mode=ia.ALL)),
+                                                 sometimes(iaa.PiecewiseAffine(scale=(0.01, 0.01))),
+                                                 sometimes(iaa.OneOf([iaa.Dropout(p=(0, 0.1)),
+                                                                      iaa.CoarseDropout(p=(0, 0.1), size_percent=(0.02, 0.25))])),
 
+                                             ],
+                                             random_order=True),
+                                  random_order=True)
 
-class SpaceCharacter(ImageOnlyTransform):
-    def __init__(self, aniso_list, always_apply=False, p=1):
-        super(SpaceCharacter, self).__init__(always_apply, p)
-        self.aniso_list = aniso_list
-
-    def apply(self, img, **params):
-        return space_between_chacracter(img, self.aniso_list)
-
-
-def scale_word(image, scale_list):
-    scale = scale_list[random.randrange(len(scale_list))]
-    return ocrodeg.transform_image(image, scale=scale)
-
-
-class ScaleWord(ImageOnlyTransform):
-    def __init__(self, scale_list, always_apply=False, p=1):
-        super(ScaleWord, self).__init__(always_apply, p)
-        self.scale_list = scale_list
-
-    def apply(self, img, **params):
-        return scale_word(img, self.scale_list)
-
-
-def distort_with_noise(image, sigma_list):
-    sigma = sigma_list[random.randrange(len(sigma_list))]
-    noise = ocrodeg.bounded_gaussian_noise(image.shape, sigma, 5.0)
-    distorted = ocrodeg.distort_with_noise(image, noise)
-    return distorted
-
-
-class DistortWithNoise(ImageOnlyTransform):
-    def __init__(self, sigma_list, always_apply=False, p=1):
-        super(DistortWithNoise, self).__init__(always_apply, p)
-        self.scale_list = sigma_list
-
-    def apply(self, img, **params):
-        return distort_with_noise(img, self.scale_list)
-
-
-def gaussian_filter(image, s_list):
-    s = s_list[random.randrange(len(s_list))]
-    blurred = ndi.gaussian_filter(image, s)
-    return blurred
-
-
-class GaussianFilter(ImageOnlyTransform):
-    def __init__(self, s_list, always_apply=False, p=1):
-        super(GaussianFilter, self).__init__(always_apply, p)
-        self.s_list = s_list
-
-    def apply(self, img, **params):
-        return gaussian_filter(img, self.s_list)
+    def __call__(self, img):
+        img = np.array(img)
+        img = self.aug.augment_image(img)
+        img = Image.fromarray(img)
+        return img

@@ -12,6 +12,7 @@ import numpy as np
 from torch.utils.data import Dataset, ConcatDataset, Subset
 from torch._utils import _accumulate
 import torchvision.transforms as transforms
+from utils.augmentation import ImgAugTransform
 
 
 class Batch_Balanced_Dataset(object):
@@ -35,7 +36,7 @@ class Batch_Balanced_Dataset(object):
         log.write(f'dataset_root: {opt.train_data}\nopt.select_data: {opt.select_data}\nopt.batch_ratio: {opt.batch_ratio}\n')
         assert len(opt.select_data) == len(opt.batch_ratio)
         # AlignCollate is some kind of augment images
-        _AlignCollate = AlignCollate(imgH=opt.imgH, imgW=opt.imgW, keep_ratio_with_pad=opt.PAD)
+        _AlignCollate = AlignCollate(imgH=opt.imgH, imgW=opt.imgW, keep_ratio_with_pad=opt.PAD, is_training=True)
         self.data_loader_list = []
         self.dataloader_iter_list = []
         batch_size_list = []
@@ -320,16 +321,21 @@ class AlignCollate(object):
     (channel, imgW, imgH).
     The process of resizing depends on keep_ratio_with_pad
     """
-    def __init__(self, imgH=32, imgW=100, keep_ratio_with_pad=False):
+    def __init__(self, imgH=32, imgW=100, keep_ratio_with_pad=False, is_training=False):
         self.imgH = imgH
         self.imgW = imgW
         self.keep_ratio_with_pad = keep_ratio_with_pad
+        self.is_training = is_training
 
     def __call__(self, batch):
         # filter examples that are invalid
         # batch = [[images], [targets]]
         batch = filter(lambda x: x is not None, batch)
         images, labels = zip(*batch)
+
+        # init augmentation in training
+        if self.is_training:
+            imgaug = ImgAugTransform()
 
         # type of images perhaps is PIL object
         if self.keep_ratio_with_pad:  # same concept with 'Rosetta' paper
@@ -341,6 +347,9 @@ class AlignCollate(object):
 
             resized_images = []
             for image in images:
+                if self.is_training:
+                    image = imgaug(image)
+
                 w, h = image.size
                 ratio = w / float(h)
                 # image height will be resize to self.imgH
@@ -363,6 +372,8 @@ class AlignCollate(object):
             image_tensors = torch.cat([t.unsqueeze(0) for t in resized_images], 0)
 
         else:
+            if self.is_training:
+                images = [imgaug(image) for image in images]
             transform = ResizeNormalize((self.imgW, self.imgH))
             image_tensors = [transform(image) for image in images]
             image_tensors = torch.cat([t.unsqueeze(0) for t in image_tensors], 0)
