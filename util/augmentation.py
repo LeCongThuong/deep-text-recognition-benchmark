@@ -50,7 +50,7 @@ class ImgAugTransform:
         img = np.array(img)
         img = self.aug.augment_image(img)
         img = Image.fromarray(img)
-        if self.opt.rgb:
+        if rgb:
             img = Image.new('RGB', (self.opt.imgW, self.opt.imgH))
         else:
             img = Image.new('L', (self.opt.imgW, self.opt.imgH))

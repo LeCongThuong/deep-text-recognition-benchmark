@@ -127,7 +127,7 @@ def hierarchical_dataset(root, opt, select_data='/'):
                     break
 
             if select_flag:
-                # LmdbDataset is a subclass of torch.utils.data.Dataset
+                # LmdbDataset is a subclass of torch.util.data.Dataset
                 # By default, dataset will filter out the samples that has the label is following types:
                 # + len(label) > batch_max_length
                 # + contains characters that are not in opt.character
@@ -183,7 +183,7 @@ class LmdbDataset(Dataset):
                         continue
 
                     # By default, images containing characters which are not in opt.character are filtered.
-                    # You can add [UNK] token to `opt.character` in utils.py instead of this filtering.
+                    # You can add [UNK] token to `opt.character` in util.py instead of this filtering.
                     out_of_char = f'[^{self.opt.character}]'
                     if re.search(out_of_char, label):
                         continue

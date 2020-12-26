@@ -7,10 +7,10 @@ import torch.utils.data
 import torch.nn.functional as F
 import os
 import json
-from utils import CTCLabelConverter, AttnLabelConverter
+from util import CTCLabelConverter, AttnLabelConverter
 from dataset import RawDataset, AlignCollate
 from model import Model
-from utils import show_pred_on_test_images
+from util import show_pred_on_test_images
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
