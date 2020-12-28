@@ -7,10 +7,10 @@ import torch.utils.data
 import torch.nn.functional as F
 import os
 import json
-from util import CTCLabelConverter, AttnLabelConverter
+from utils import CTCLabelConverter, AttnLabelConverter
 from dataset import RawDataset, AlignCollate
 from model import Model
-from util import show_pred_on_test_images
+from utils import show_pred_on_test_images
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
@@ -22,8 +22,7 @@ def demo(opt):
         converter = AttnLabelConverter(opt.character)
     opt.num_class = len(converter.character)
 
-    if opt.rgb:
-        opt.input_channel = 3
+    opt.input_channel = 1
     model = Model(opt)
     print('model input parameters', opt.imgH, opt.imgW, opt.num_fiducial, opt.input_channel, opt.output_channel,
           opt.hidden_size, opt.num_class, opt.batch_max_length, opt.Transformation, opt.FeatureExtraction,
