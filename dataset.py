@@ -222,9 +222,9 @@ class LmdbDataset(Dataset):
             if not self.opt.sensitive:
                 label = label.lower()
 
-            # We only train and evaluate on alphanumerics (or pre-defined character set in train.py)
-            out_of_char = f'[^{self.opt.character}]'
-            label = re.sub(out_of_char, '', label)
+            # # We only train and evaluate on alphanumerics (or pre-defined character set in train.py)
+            # out_of_char = f'[^{self.opt.character}]'
+            # label = re.sub(out_of_char, '', label)
         return (img, label)
     
 
@@ -317,11 +317,13 @@ class AlignCollate(object):
     (channel, imgW, imgH).
     The process of resizing depends on keep_ratio_with_pad
     """
-    def __init__(self, imgH=32, imgW=100, keep_ratio_with_pad=False, is_training=False):
+    def __init__(self, imgH=32, imgW=100, keep_ratio_with_pad=False, is_training=False, rbg=True, model_input_channel=1):
         self.imgH = imgH
         self.imgW = imgW
         self.keep_ratio_with_pad = keep_ratio_with_pad
         self.is_training = is_training
+        self.rbg = rbg
+        self.model_input_channel = model_input_channel
 
     def __call__(self, batch):
         # filter examples that are invalid
@@ -331,7 +333,7 @@ class AlignCollate(object):
 
         # init augmentation in training
         if self.is_training:
-            imgaug = ImgAugTransform()
+            imgaug = ImgAugTransform(self.rbg)
 
         # type of images perhaps is PIL object
         if self.keep_ratio_with_pad:  # same concept with 'Rosetta' paper
@@ -341,7 +343,8 @@ class AlignCollate(object):
             for image in images:
                 if self.is_training:
                     image = imgaug(image)
-                image = ImageOps.grayscale(image)
+                if self.model_input_channel == 1 and self.rbg == 3:
+                    image = ImageOps.grayscale(image)
                 w, h = image.size
                 ratio = w / float(h)
                 # image height will be resize to self.imgH
@@ -369,7 +372,8 @@ class AlignCollate(object):
         else:
             if self.is_training:
                 images = [imgaug(image) for image in images]
-            images = [ImageOps.grayscale(image) for image in images]
+            if self.model_input_channel == 1 and self.rbg == 3:
+                images = [ImageOps.grayscale(image) for image in images]
             transform = ResizeNormalize((self.imgW, self.imgH))
             image_tensors = [transform(image) for image in images]
             image_tensors = torch.cat([t.unsqueeze(0) for t in image_tensors], 0)
