@@ -22,7 +22,6 @@ def demo(opt):
         converter = AttnLabelConverter(opt.character)
     opt.num_class = len(converter.character)
 
-
     opt.input_channel = 1
     model = Model(opt)
     print('model input parameters', opt.imgH, opt.imgW, opt.num_fiducial, opt.input_channel, opt.output_channel,
