@@ -56,8 +56,7 @@ def train(opt):
 
     opt.num_class = len(converter.character)
 
-    if opt.rgb:
-        opt.input_channel = 3
+    opt.input_channel = 1
     model = Model(opt)
 
     print('model input parameters', opt.imgH, opt.imgW, opt.num_fiducial, opt.input_channel, opt.output_channel,

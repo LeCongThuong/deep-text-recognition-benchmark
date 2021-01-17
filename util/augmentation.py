@@ -46,12 +46,8 @@ class ImgAugTransform:
                                              random_order=True),
                                   random_order=True)
 
-    def __call__(self, img, rbg=False):
+    def __call__(self, img):
         img = np.array(img)
         img = self.aug.augment_image(img)
         img = Image.fromarray(img)
-        if rbg:
-            img = Image.new('RGB', (self.opt.imgW, self.opt.imgH))
-        else:
-            img = Image.new('L', (self.opt.imgW, self.opt.imgH))
         return img
