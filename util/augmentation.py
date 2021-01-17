@@ -10,10 +10,10 @@ import imgaug as ia
 
 
 class ImgAugTransform:
-    def __init__(self):
+    def __init__(self, rbg=True):
         sometimes = lambda aug: iaa.Sometimes(0.3, aug)
-
-        self.aug = iaa.Sequential(iaa.SomeOf((1, 5),
+        if rbg:
+            self.aug = iaa.Sequential(iaa.SomeOf((1, 5),
                                              [
                                                  # blur
 
@@ -45,6 +45,28 @@ class ImgAugTransform:
                                              ],
                                              random_order=True),
                                   random_order=True)
+        else:
+            self.aug = iaa.Sequential(iaa.SomeOf((1, 5),
+                                                 [
+                                                     # blur
+
+                                                     sometimes(iaa.OneOf([iaa.GaussianBlur(sigma=(0, 1.0)),
+                                                                          iaa.MotionBlur(k=3)])),
+
+                                                     # distort
+                                                     sometimes(iaa.Crop(percent=(0.01, 0.05), sample_independently=True)),
+                                                     sometimes(iaa.PerspectiveTransform(scale=(0.01, 0.01))),
+                                                     sometimes(iaa.Affine(scale=(0.7, 1.3), translate_percent=(-0.1, 0.1),
+                                                                          #                            rotate=(-5, 5), shear=(-5, 5),
+                                                                          order=[0, 1], cval=(0, 255),
+                                                                          mode=ia.ALL)),
+                                                     sometimes(iaa.PiecewiseAffine(scale=(0.01, 0.01))),
+                                                     sometimes(iaa.OneOf([iaa.Dropout(p=(0, 0.1)),
+                                                                          iaa.CoarseDropout(p=(0, 0.1), size_percent=(0.02, 0.25))])),
+
+                                                 ],
+                                                 random_order=True),
+                                      random_order=True)
 
     def __call__(self, img):
         img = np.array(img)
